@@ -1,7 +1,7 @@
 # solfire (picoCTF-style Solana challenge, binary exploitation, hard)
 
 Target: `nc chatelaine.cylabacademy.net 14318` (official challenge target only).
-Files: `solfire/solfire.tar.gz` (src/main.rs harness, solfire.so BPF vault program, Dockerfile).
+Files: `ctf_practice/solfire/solfire.tar.gz` (src/main.rs harness, solfire.so BPF vault program, Dockerfile).
 
 Status: NOT SOLVED. Analysis done offline; no exploit sent yet.
 

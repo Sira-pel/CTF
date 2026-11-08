@@ -23,3 +23,6 @@ downloads/
 *.swp
 .idea/
 .vscode/
+
+# Large challenge binaries (GitHub rejects files over 100MB)
+ctf_practice/horsepower/d8
