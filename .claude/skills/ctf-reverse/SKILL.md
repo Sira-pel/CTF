@@ -13,6 +13,10 @@ metadata:
 
 Quick reference for RE challenges. For detailed techniques, see supporting files.
 
+## Tool Availability Policy
+
+Before installing anything below, check whether the tool/package already exists on this machine (`which <tool>`, `command -v <tool>`, `<tool> --version`, `pip show <pkg>`, etc.) and just use it if so. Only when something required is genuinely missing, tell the user which tool/package is missing and why the task needs it, then ask them to install it (or confirm before installing it yourself) — do not install new tools silently.
+
 ## Prerequisites
 
 **Python packages (all platforms):**

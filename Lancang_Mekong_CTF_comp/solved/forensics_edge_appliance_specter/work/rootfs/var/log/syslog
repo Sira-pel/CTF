@@ -1,0 +1,8 @@
+Sep 22 18:25:28 vpn-edge-gw01 kernel: [    2.710200] eth0: link up, 1000Mbps, full-duplex, lpa 0xCDE1
+Sep 22 18:25:28 vpn-edge-gw01 kernel: [    2.820100] Assigned static IPv4: 10.250.4.1/24 (gateway: 10.250.4.254)
+Sep 22 18:25:29 vpn-edge-gw01 systemd[1]: Starting System Logging Service...
+Sep 22 18:25:29 vpn-edge-gw01 rsyslogd: [origin software="rsyslogd" swVersion="8.2302.0"] start
+Sep 22 18:25:29 vpn-edge-gw01 sshd[440]: Server listening on 0.0.0.0 port 22.
+Sep 22 18:25:29 vpn-edge-gw01 chronyd[412]: System clock synchronized with NTP server 10.250.0.1 (offset -0.000142s)
+Sep 22 18:25:30 vpn-edge-gw01 appliance-core[482]: Started daemon on 10.250.4.1:443
+Sep 22 18:25:30 vpn-edge-gw01 init: System initialization completed at 18:25:30 UTC.

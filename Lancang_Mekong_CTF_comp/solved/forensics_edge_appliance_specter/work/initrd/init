@@ -1,0 +1,23 @@
+#!/bin/sh
+# ApexGate Linux Minimal Early-Boot Init
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+echo "[INIT] Mounting virtual filesystems..."
+mount -t proc proc /proc 2>/dev/null
+mount -t sysfs sysfs /sys 2>/dev/null
+mount -t devtmpfs devtmpfs /dev 2>/dev/null
+mount -t securityfs securityfs /sys/kernel/security 2>/dev/null
+
+echo "[INIT] Executing pre-mount scripts..."
+for script in /scripts/init-premount/*; do
+    if [ -x "$script" ]; then
+        echo "[INIT] Running $script..."
+        "$script"
+    fi
+done
+
+echo "[INIT] Mounting root SquashFS partition..."
+mount -t squashfs -o ro /dev/sda2 /root 2>/dev/null || mount -t squashfs -o ro /dev/vda2 /root 2>/dev/null
+
+echo "[INIT] Switching root to appliance runtime..."
+exec switch_root /root /sbin/init

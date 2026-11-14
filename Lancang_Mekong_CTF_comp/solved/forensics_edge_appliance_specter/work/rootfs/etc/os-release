@@ -1,0 +1,7 @@
+NAME="ApexGate SecureVPN Enterprise"
+VERSION="4.2.1-sp2"
+ID="apexgate"
+ID_LIKE="debian"
+VERSION_ID="4.2"
+PRETTY_NAME="ApexGate SecureVPN Enterprise v4.2 (Crimson Release)"
+HOME_URL="https://support.apex-edge.net"

@@ -1,0 +1,32 @@
+[    0.000000] Linux version 6.6.45-appliance-x86_64 (build@apex-builder) (gcc version 12.2.0) #1 SMP PREEMPT_DYNAMIC Wed Aug 12 14:10:00 UTC 2026
+[    0.000000] Command line: BOOT_IMAGE=/boot/vmlinuz-appliance root=/dev/sda2 ro console=ttyS0,115200 quiet security=apparmor ima_policy=tpm
+[    0.000000] ApexGate Platform Hardware Reset Telemetry: Boot Count = 42 (Previous: 41)
+[    0.000000] Reset reason: 0x01 (POWER_ON_RESET) - standard power cycle
+[    0.000000] BIOS-provided physical RAM map:
+[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
+[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x000000007ffeffff] usable
+[    0.000000] DMI: ApexGate Technologies ApexGate SecureVPN Enterprise v4.2/OEM-MB, BIOS 1.4.2 05/18/2025
+[    0.312000] e1000e: Intel(R) PRO/1000 Network Driver
+[    0.314500] e1000e 0000:00:03.0 eth0: (PCI Express:2.5GT/s:Width x1) 02:42:0a:fa:04:01
+[    0.501230] Trying to unpack rootfs image as initramfs...
+[    0.891240] Freeing initrd memory: 4096K
+[    0.910200] [INIT] Mounting virtual filesystems...
+[    0.950120] [INIT] Executing pre-mount scripts in /scripts/init-premount...
+[    1.120400] [INIT] Running /scripts/init-premount/vpn_sync.sh...
+[    1.240112] [INIT-PREMOUNT] vpn_sync: Initializing hardware cryptographic key synchronization...
+[    1.242300] [INIT-PREMOUNT] vpn_sync: Reading hardware measurements from /sys/kernel/security/tpm0/binary_bios_measurements...
+[    1.244010] [INIT-PREMOUNT] vpn_sync: Stage 1 extend: PCR 14 = b2a554fdbe36b5c4109c7cf0c6c489ad27ea4ae2498083c290f1f609f0329195
+[    1.245100] [INIT-PREMOUNT] vpn_sync: Stage 2 extend: PCR 14 = b2be71fe643250e831a43ba32ddb6a7e8b81a47df2d78aebc3addc9a4ffb475a
+[    1.246200] [INIT-PREMOUNT] vpn_sync: Stage 3 extend: PCR 14 = eb81be42dc07addbb607540584bd2efe61e9f0cc0918c3b85d63b2d36822f79e
+[    1.247000] [INIT-PREMOUNT] vpn_sync: Verified PCR 14 integrity binding (final digest: sha256:eb81be42dc07addbb607540584bd2efe61e9f0cc0918c3b85d63b2d36822f79e)
+[    1.248230] [INIT-PREMOUNT] vpn_sync: Pre-mount cryptographic validation completed successfully.
+[    1.452300] VFS: Mounted root (squashfs filesystem) readonly on device 8:2.
+[    2.710200] eth0: link up, 1000Mbps, full-duplex, lpa 0xCDE1
+[    2.820100] Assigned static IPv4: 10.250.4.1/24 (gateway: 10.250.4.254)
+[    3.612000] Starting ApexGate Core Gateway Daemon: appliance-core...
+[    4.102300] System initialization completed at 18:09:00 UTC.
+[  852.120400] ApexGate VPN Session Engine: Active tunnels: 142, throughput: 840 Mbps
+[  912.110200] [CRIT] Kernel driver stall detected in cryptodev_accel_v2 (timeout 60s)
+[  971.890100] [CRIT] Watchdog timer nearing expiration: 1s remaining, hardware reset primed
+[  972.145120] Kernel panic - not syncing: Watchdog timer expired: hardware reset imminent at 18:25:12 UTC
+[  972.145890] Hardware reset assertion triggered on watchdog device /dev/watchdog0

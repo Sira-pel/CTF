@@ -1,0 +1,6 @@
+#!/bin/sh
+# ApexGate Enterprise Appliance SysV Init
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+echo "[INIT] Booting ApexGate SecureVPN Enterprise v4.2..."
+[ -x /etc/init.d/appliance-core ] && /etc/init.d/appliance-core start
+exec /bin/sh
