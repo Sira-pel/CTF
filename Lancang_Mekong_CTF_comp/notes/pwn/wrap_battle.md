@@ -24,3 +24,10 @@
 ## Notes
 - Confirmed locally first: the redirected loader printed a temporary `flag` file created in `/tmp`.
 - The Python pipe buffer hid that local write; the remote socket read returned it directly.
+
+## Better approach (2026 retro)
+
+This is a classic **CL.TE request-smuggling desync** (Content-Length vs Transfer-Encoding
+chunked disagreement) — naming it that points straight at the methodology: a `smuggler.py`-style
+differential probe finds the parser disagreement without reversing the buffer sizes by hand.
+The overflow-onto-view-metadata + XOR-encoded-callback overwrite was the right follow-through.

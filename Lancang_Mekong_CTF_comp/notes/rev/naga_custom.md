@@ -9,3 +9,11 @@
 - Key recovery: `PROBE` fingerprints of fixed decls vs. a precomputed table of all 65536 keys (`fptab.py`) -> unique key after 2 probes.
 - Solve: `solver.py` builds a declaration constructively (increasing days so order is fixed; per-post: 2 adjuster entries brute-forcing T masks, filler entries solving Adler via meet-in-the-middle / CRC via scanning tag / HW / hash, then 3 adjusters for end-of-post treasuries). ~5-10 s. `client.py --submit` does the whole flow in one connection.
 - Tools: python3, gdb (world-table dump to find a bug: generator makes 7 groups, not 8).
+
+## Better approach (2026 retro)
+
+The simulator + fingerprint-table key recovery (2 probes → unique 16-bit key) was efficient
+and is the right template. One speedup for the constructive declaration search (the per-post
+Adler meet-in-the-middle / CRC tag scan): angr or a z3 model of the per-entry update can
+solve the adjuster masks directly instead of brute-forcing T masks. Reaching `model.py` would
+also have been faster by emulating `main` under unicorn than by gdb world-table dumps.

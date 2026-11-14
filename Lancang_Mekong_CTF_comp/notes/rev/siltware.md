@@ -47,3 +47,12 @@ recovered uniquely from 6 FP probes using the exact model in work/solve.py) and 
 Need a 64-record cassette hitting all 20 exactly -> flag. work2/: C beam search (beam.c, model verified exact vs Python),
 port.py (20-way parallel heuristic portfolio), live3.py (live flow, submits only if locally 20/20).
 Offline: solves hard random orders in ~2-5 min. Live attempt 1: UNSOLVED after 900s (nothing submitted). Next: longer/wider beam, retry on new connection.
+
+## Better approach (2026 retro, flag rejected)
+
+The static decrypt was a dead end because the real target is the remote desk, not the APK's
+printed string. For the native gate: **frida-hook `Core.a`/`Core.b`** on an emulator (or
+`unicorn`-emulate `libsilt.so`) to read the state the app computes for a passing cassette,
+rather than inverting the seeded state machine by hand. For the desk itself, the beam-search
++ exact-model approach (work2/) is right; emulating the model-defining native code validates
+it faster than a Python re-derivation. The live solve just needs a wider/longer beam.

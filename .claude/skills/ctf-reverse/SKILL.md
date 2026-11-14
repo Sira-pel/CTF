@@ -199,3 +199,49 @@ Use [field-notes.md](field-notes.md) after the first round of triage when you kn
 - Technique notes: anti-debug bypass, VM analysis, x86-64 gotchas, iterative solvers, Unicorn, timing side channels
 - Platform notes: Godot, Roblox, macOS/iOS, embedded firmware, kernel drivers, game engines, Swift, Kotlin, Go, Rust, D
 - Case notes: modern CTF-specific reversing patterns and older classic challenge patterns
+
+## 2026 refresh — techniques from the Lancang-Mekong retro
+
+Our solved rev set (ferrysus, dockblock, naga_custom) were all **custom VM / bytecode
+interpreters**, and our method — reverse the rules into a validated simulator, then solve
+constructively — is sound and should stay the default. The cost was the *grind*: ferrysus
+alone took ~126 incremental scripts to pin opcode semantics by hand. The refresh is about
+reaching a validated model and a solved input *faster*.
+
+### Reach the model by emulation, not re-implementation
+Before hand-porting an opcode table into Python, **emulate the real interpreter**:
+- `unicorn` / `qiling` to run the VM as-is and observe register/memory effects per opcode.
+  You get a byte-exact oracle immediately, which is the thing we spent 126 scripts building.
+- Drive the emulator with crafted bytecode to isolate one handler at a time, instead of
+  gdb-scripting the live binary repeatedly (our `op10a..op10h` sequence).
+- Keep the "validate sim vs binary on N random inputs" check — that discipline was correct.
+
+### Solve the input with symbolic execution, not hill-climbing
+For the per-stage constraint solving (ferrysus p0/D-nibble back-solve; patch_me_outside
+checkpoint hill-climb):
+- **angr**: mark the "accepted" address, make the pass/input symbolic (`claripy` BVS),
+  `avoid` the reject address, let z3 produce the satisfying input. Works directly on the
+  binary — no opcode table needed when path count is bounded.
+- Interpreter loops cause **path explosion**; mitigate by hooking the dispatch loop,
+  concretising the opcode stream, using `veritesting`, or lifting just the checker with
+  Triton/miasm and feeding its constraints to z3.
+- When the VM's instruction set isn't supported by any lifter, a ~100-line custom symbolic
+  executor over your emulated semantics is often faster than hand-algebra per stage.
+- Refs: https://docs.angr.io/en/latest/examples.html · https://noh.am/en/posts/vm/ ·
+  https://blog.deobfuscate.io/using-symbolic-execution-for-devirtualisation
+
+### Stripped / garble-obfuscated Go: recover symbols first
+dockblock was a garble-obfuscated static Go ELF reversed cold. Go keeps `pclntab` even when
+stripped, so run these *before* hand-reversing the rules:
+- **GoReSym** (Mandiant) — `GoReSym -t -d -p ./bin`, then its IDA script applies labels.
+- **redress** and **unstrip** (Rust, Go 1.18–1.25, ELF/Mach-O/PE) — reconstruct func names
+  and types. garble hashes identifiers but the pclntab structure usually still parses, so
+  you often still recover control-flow boundaries and some strings.
+- Refs: https://github.com/mandiant/GoReSym · https://github.com/backwardn/redress ·
+  Go internals: https://cloud.google.com/blog/topics/threat-intelligence/golang-internals-symbol-recovery/
+
+### Native crypto in APKs: instrument, don't invert
+siltware needed inverting a seeded native state machine to satisfy an FNV gate. Instead of
+static inversion, **frida**-hook `Core.a`/`Core.b` on a device/emulator (or `unicorn`-emulate
+`libsilt.so`) to read the state the app actually computes on a passing input. Static decrypt
+of a constant-seeded blob was a dead end because the real target was a remote desk.

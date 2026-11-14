@@ -43,3 +43,10 @@ the remote host): `/tmp/.../pier_pressure_extract/exploit.py` (pwntools).
 ```
 LMC{too_many_notes_for_one_pier}
 ```
+
+## Better approach (2026 retro)
+
+Clean leak+ret2libc, nothing wrong with it. Two small speedups for next time:
+`one_gadget ./libc.so.6` — with the stack state after the second `FILE` overflow a single
+execve gadget may remove the whole `system("/bin/sh")` stage; and `angrop`/`Ropper` to
+locate the `pop rdi; pop rsi; pop rdx` gadget instead of reading inter-function bytes by hand.

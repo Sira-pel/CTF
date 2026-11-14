@@ -25,3 +25,11 @@ Remote fds: journal is 5 (decoy), flag is 6. Locally, with no extra fds, the fla
 Script: `Lancang_Mekong_CTF_comp/solved/pwn_the_last_flush/work/src/solve.py`
 
 Flag: `LMC{chunks_freed_and_the_seal_gave_way}`
+
+## Better approach (2026 retro)
+
+Overwriting the summary `FILE` vtable to `_IO_file_jumps` + fileno *is* a FILE-structure
+attack — good. The version-robust generalization is **House of Apple 2** (forge the FILE so
+`_wide_data → _IO_wfile_jumps`), which doesn't depend on a convenient `_IO_file_jumps`
+primitive and works the same across glibc 2.35–2.39; pwntools `FileStructure()` builds it.
+The off-by-null → backward-consolidation leak was textbook; keep it.

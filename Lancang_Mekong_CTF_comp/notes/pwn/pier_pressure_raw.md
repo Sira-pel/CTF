@@ -22,3 +22,10 @@ Gadget at PIE+`0x12ef`: `push rbp; mov rbp, rsp; pop rdi; pop rsi; pop rdx; ret`
 4. `cat /run/challenge/flag`.
 
 Flag: `LMC{too_many_notes_for_one_pier}`
+
+## Better approach (2026 retro)
+
+See `pier_pressure.md` → "Better approach". In short: `one_gadget ./libc.so.6` may collapse the
+two-stage `system("/bin/sh")` into one execve gadget given the post-overflow stack state, and
+`angrop`/`Ropper` auto-locate the `push rbp; …; pop rdi; pop rsi; pop rdx` gadget. Leak+ret2libc
+itself was clean.

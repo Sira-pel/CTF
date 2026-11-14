@@ -96,3 +96,15 @@ Followed the only remaining offline lead (recover a cluster plaintext, since all
 2. **Stop guessing AAD fields blindly.** Instead, treat "what makes a TX's AAD valid" as itself the open question and look for a non-guessing way to learn it — e.g., whether multiple TXs in one session are allowed (would reveal if seq resets per-session or is global), or whether there's a lower-cost oracle (do ATTACH from a second socket, see if INFO or any response differs once a TX is in flight).
 2. Once the AAD shape is known: `ct = program_wire XOR keystream(recipe.bin, rec-17)[:len(program_wire)]` plus a forged tag (via the already-recovered H/S) runs a **chosen VM program** under nonce `cbf28672...`. The payload to run is the heap-leak chain from `r.txt`/notes `## VM`, extended into an actual arbitrary-read/flag-read chain.
 3. The local engine fix (loader + hex-wire-per-line input) means step 2's program can be fully built and verified offline before it ever needs to touch the network — only the final forged TX needs to go over the wire.
+
+## Better approach (2026 retro, unsolved)
+
+The GHASH-key recovery + tag forgery is Joux's **forbidden attack** and was done correctly (H and
+S verified against all four same-nonce records). Session 2b nailed the real wall: **no known
+plaintext** (IC ≈ random, crib-drag empty) ⇒ tag-forgery works but *meaningful* chosen-ciphertext
+forgery is impossible, plus the live AAD/`seq` freshness is unknown. That's the right diagnosis.
+Reinforced lesson for the skill set: on any GCM-nonce-reuse challenge, run the IC / crib-drag KP
+check *first* — if plaintexts are high-entropy, the forgery path is dead on crypto grounds before
+spending live attempts. Given 0 solves + a flat `ERR auth` oracle even for a verbatim-valid record,
+the standing recommendation (organizer/broken-challenge check) stands. See `ctf-crypto/SKILL.md`
+→ "AES-GCM nonce reuse".

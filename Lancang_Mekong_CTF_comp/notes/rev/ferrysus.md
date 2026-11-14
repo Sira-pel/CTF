@@ -84,3 +84,17 @@ Ops: 1,2,3,5,6,7,15*6,8,9,16*5,10,11,12,13.
   0x39303670 but computes 0x21320e63. Back-solving that step needs p0 = 0xec097533,
   while the merged array really contains 0x859f02eb. So one more detail of the fold
   (mode/rotate for the first step, or which item op10 starts from) is still unmodelled.
+
+## Better approach (2026 retro)
+
+This cost ~126 incremental scripts to pin opcode semantics by hand. Two changes make it an
+afternoon next time:
+1. **Emulate instead of re-implement.** Run `ferry-inspect` under `unicorn`/`qiling` and
+   watch register/memory effects per opcode on crafted bytecode. That gives a byte-exact
+   oracle immediately — the thing the 126 scripts were slowly reconstructing — including the
+   op10 fold modes and D-nibble selectors, without gdb-scripting the live binary repeatedly.
+2. **Symbolic-solve each stage.** Once the per-stage checker is isolated, let angr/z3 solve
+   for `p0`/`D`/`w4` against the accept condition instead of hand back-solving (the op10 i=0
+   mismatch that blocked the raw note is exactly the kind of thing z3 resolves in one shot).
+The genuinely crypto stages (op24 Pohlig–Hellman, op25 factoring) were handled right — keep
+those. See `ctf-reverse/SKILL.md` → "emulation" and "symbolic execution".

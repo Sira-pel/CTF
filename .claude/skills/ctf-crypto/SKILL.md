@@ -103,3 +103,50 @@ python3 -c "from sympy import factorint; print(factorint(<n>))"
 ## Detailed Sections
 
 Technique-by-technique notes (the long tail) live in [details.md](details.md). Read it, or grep it for your keyword, once the quick start and the topic files above have not settled the challenge.
+
+## 2026 refresh — techniques from the Lancang-Mekong retro
+
+From our crypto/ECDSA/RSA set: one lattice win (steal_beneath_the_seal), two hard
+unsolved (treaty_of_six_gates ECDSA, naga_weave RSA), and a GCM forgery (merge_emergency).
+
+### Use `flatter` as the default lattice reducer
+We solved the hidden-number problem with a Sage/fpylll LLL Kannan embedding — correct, but
+**flatter** (Ryan–Heninger 2023: recursive QR + precision compression) is far faster in high
+dimension and is now the go-to for HNP/Coppersmith/LWE lattices. Reach for it before fplll on
+anything past ~dim 60; even faster segmented-BKZ libraries exist if flatter stalls.
+- Ref: FLATTER https://github.com/keeganryan/flatter
+
+### ECDSA biased-nonce: lattice HNP is only the first tool
+treaty_of_six_gates ruled out magnitude-biased nonces (HNP at every bound to 240 bits) with
+validated tooling — the right call. When HNP comes back clean but there's a *large signature
+budget* (treaty gave 560/session), escalate instead of stopping:
+- **Bleichenbacher FFT/Fourier attack** — recovers the key from a *sub-bit* nonce bias
+  (fractions of a bit) given many thousands of signatures, which no lattice can catch. The
+  generous sig budget is itself the hint to try this.
+- **Minerva** — if the leak is the nonce's *bit-length* (timing side channel), ~500–2000 sigs
+  recover the key; different model from "top bits zero".
+- If both are clean too, the bug is probably **not** nonce-related (verifier logic, key
+  relation, or something needing source) — pivot to looking for downloadable source rather
+  than more black-box signature analysis.
+- Refs: Minerva https://minerva.crocs.fi.muni.cz/ · Bleichenbacher line (RWC 2021 history).
+
+### AES-GCM nonce reuse = Joux "forbidden attack"
+merge_emergency recovered the GHASH key `H` from a reused-nonce cluster and forged tags —
+that's Joux's forbidden attack. Formalize it as a reusable play:
+- Two ciphertexts under the same (key,nonce) → solve a polynomial over GF(2^128) for `H`,
+  then `tag = GHASH(H,aad,ct) XOR S` forges *any* message **under that same nonce**.
+- Critical limit we re-learned: tag-forgery ≠ *meaningful* forgery. To craft a chosen
+  plaintext you still need a **known plaintext** in that keystream (`ct_i⊕ct_j = pt_i⊕pt_j`).
+  No KP ⇒ you can authenticate garbage but not a controlled payload. Confirm an IC/crib-drag
+  check early so you don't chase a forgery path that's dead without KP.
+- AES-GCM-SIV resists this — if a "GCM" challenge shrugs off reused nonces, suspect SIV.
+- Ref: Böck/Zauner/Devlin, "Nonce-Disrespecting Adversaries" (BlackHat 2016).
+
+### Black-box RSA that looks random ⇒ stop sweeping moduli
+naga_weave: 126 moduli, every standard relation (batch-GCD, Fermat, ROCA, p-1, rho, ECM,
+Bellcore/Franklin-Reiter, smoothness) negative, residues statistically uniform. That pattern
+means the primes are strong and **the vulnerability is in the protocol, not the modulus** —
+the signing/combination logic (here `weld` of two seals, "repair threshold 2" ⇒ likely a
+2-of-n scheme or a blinding relation). Meta-rule: once residues test uniform and all textbook
+relations fail, redirect effort from factoring to reversing *what a signature signs and how
+seals combine* — and flag for a source/handout check.

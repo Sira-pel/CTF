@@ -62,3 +62,13 @@ AES-GCM open failed for the persona passwords. Rechecked 2026-11-11: the nonzero
 ## Still missing
 
 The offsite keyphrase (or a different ciphertext/nonce layout). Decoys are not the flag.
+
+## Better approach (2026 retro, unsolved)
+
+The carving and the surviving-code key-derivation reconstruction (PBKDF2-250k → HMAC → HKDF) were
+thorough. Two things: (1) the real blocker is OSINT — the "offsite personal emergency channel"
+keyphrase isn't on the disk, so this is gated on the boromeychan/Telegram/persona trail, not more
+crypto; treat it as an OSINT task. (2) For the AES-GCM open, confirm the mode: the "no plaintext
+under any nonce layout" symptom also fits **AES-GCM-SIV**; and verify `PBKDF2-HMAC-SHA256`/HKDF
+output against a known vector (or reproduce with `hashcat`/`openssl`) so a negative is trustworthy.
+Carve with `tsk_recover`/`icat` (Sleuth Kit) rather than by hand. See `ctf-forensics/SKILL.md`.

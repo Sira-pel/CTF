@@ -106,3 +106,14 @@ On the saved `NW-PKRY-MY9J` lane-0 capture (360 records, 10 traces):
 - `next_prime(trace<<k)` does not divide `n`. Seeded `random.Random` / SHA-512 `next_prime` from the session and lane name does not rebuild `n`.
 - Fermat on `k*n` for k in the harmonic set `{0xA3,0xB5,0xC7}` and small integers, 5000 steps, does not hit.
 - No prime factor below 1e5. `weld 0:-1 1:1` is a real crypto reject (socket closes). Same-lane `0`, `n`, and `n+1` stay `ERR bad weld packet`.
+
+## Better approach (2026 retro, unsolved)
+
+The modulus analysis was complete: uniform residues + every textbook RSA relation negative ⇒
+the primes are strong and **the bug is in the protocol, not the moduli**. Stop sweeping
+GCD/Fermat/ROCA/p-1 variants. Redirect to the *scheme*: what exactly a "repair seal" signs,
+how `weld` combines two lane seals, and what `REPAIR_THRESHOLD 2` implies — this smells like a
+2-of-n threshold or a blinding/combination relation where two individually-invalid seals
+multiply/CRT into a valid one. The winning move is almost certainly reconstructing that
+combination logic (ideally from a handout/source — flag the missing-handout gap to the user),
+not more factoring. See `ctf-crypto/SKILL.md` → "Black-box RSA that looks random".

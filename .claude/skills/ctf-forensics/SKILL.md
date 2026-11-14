@@ -95,3 +95,39 @@ See [disk-and-memory.md](disk-and-memory.md) for full Volatility plugin referenc
 ## Detailed Sections
 
 Technique-by-technique notes (the long tail) live in [details.md](details.md). Read it, or grep it for your keyword, once the quick start and the topic files above have not settled the challenge.
+
+## 2026 refresh — techniques from the Lancang-Mekong retro
+
+From our forensics set: nested stego (nums, solved), firmware/TPM/PCAP (edge_appliance,
+solved), and a KDF/AEAD blob that resists decryption (treasury_leak, intern — unsolved).
+
+### Nested stego: automate the layer peeling
+nums was docx → JPEG-comment password → WinZip-AES → reversed-base64 → PNG-LSB-gzip → WAV →
+Morse. Peel faster with:
+- **`binwalk -eM`** (recursive extract, `-M` recurses) for the carve layers.
+- **`zsteg -a`** for PNG/BMP LSB (scan first, `-a` is slow); **`stegseek <file> <wordlist>`**
+  to brute steghide passphrases far faster than `steghide`.
+- **`stegoveritas`** to fan out exiftool/binwalk/zsteg/foremost/colour-planes in one go.
+- Audio layer: open a **spectrogram** first (Sonic Visualiser / `sox in.wav -n spectrogram`);
+  for on-off-keyed Morse, threshold the envelope and decode by dit/dah duration (our manual
+  600 Hz OOK read). Refs: triage order file→exiftool→strings→binwalk→zsteg→stegseek.
+
+### Memory dumps: use the known CVE tooling
+moon_lover (team/) recovered a KeePass master password by hand via **CVE-2023-32784** (leftover
+U+25CF bullet strings). Automate it: **`keepass-password-dumper`** (vdohney) or mister-turtle's
+Go port (emits a John-the-Ripper mask) against the KeePass process dump, **pagefile.sys**,
+**hiberfil.sys**, or a full RAM dump — recovers all but the first character. For the broader
+5 GB raw dump, drive **volatility3** (pslist, filescan, dumpfiles, windows.registry) rather than
+hand-carving. Ref: https://github.com/vdohney/keepass-password-dumper
+
+### A documented KDF/AEAD recipe that won't decrypt: question input *types*, not just values
+treasury_leak and intern both have a written HKDF→AES-GCM recipe that fails to authenticate.
+When that happens, the error is usually a mis-typed input, not a wrong constant:
+- A field **labeled as one thing but the wrong length for it** is a planted hint. A DKIM `bh=`
+  that is 12 raw bytes (not base64 of a 32-byte SHA-256) is suspicious — try it as the **GCM
+  nonce/IV** or recompute the *real* DKIM body hash with `dkimpy`/`opendkim-testmsg` using
+  proper relaxed/simple canonicalization (a hand `sha256(body)` won't match DKIM).
+- If plain GCM refuses every tag placement, try **AES-GCM-SIV** (nonce-misuse-resistant) and
+  confirm your GCM/HKDF tooling against RFC test vectors so a negative is trustworthy.
+- Build a **known-plaintext crib** of the expected JSON (`{"token":`, `{"` ) and check the
+  keystream for it before concluding the key is wrong — distinguishes wrong-key from wrong-AAD.

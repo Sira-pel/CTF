@@ -25,3 +25,15 @@ KeePass left the master password in process memory as UTF-16 strings of U+25CF b
 `GechIsn0tFailinLove@@@`
 
 That master password opens the database. The submitted secret is the moon entry, not the master password.
+
+## Better approach (2026 retro)
+
+The master-password recovery was done by hand via CVE-2023-32784. Automate with
+**`keepass-password-dumper`** (vdohney) — point it at the 5 GB raw dump, `pagefile.sys`, or
+`hiberfil.sys`; it recovers all-but-the-first-character directly, and mister-turtle's port emits a
+John-the-Ripper mask to fill the gap. But note the *actual* blocker here isn't recovery technique —
+both the `moon` entry password and the KDBX master password were rejected by the scoreboard. The
+unsolved lead is the **locked Pastebin** (`pastebin.com/efZdTNa0`) in Edge history; the flag is
+likely its body, not anything in the KeePass DB. Drive the 5 GB dump with **volatility3** (Edge
+process memory / cached web content, `windows.filescan`+`dumpfiles`) to try to recover the paste
+body offline before any approved network fetch. See `ctf-forensics/SKILL.md` → "Memory dumps".

@@ -29,3 +29,10 @@ XOR-ing stones instead of adding them does not match the hash. Stones derived fr
 Plaintext: `{"token":"SILT-4cac48ec2a8f57813aa94ca33fa1df02"}`.
 
 `SUBMIT SILT-4cac48ec2a8f57813aa94ca33fa1df02` → `LMC{dredged_the_token_from_the_silt}`.
+
+## Better approach (2026 retro)
+
+The single Kannan-embedding LLL on 8 samples was the right idea and solved `h` cleanly. Only
+tooling note for next time: use **flatter** (recursive-QR LLL replacement) rather than fplll/
+Sage LLL — same lattice, much faster past ~dim 60, which matters if a bigger instance needs
+more samples or larger scaling. The subset-sum-over-SHA256 "stones" step was fine.

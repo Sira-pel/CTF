@@ -34,3 +34,12 @@ Submitted transcript (this connection's ORDER `0:10,1:7,2:9,3:10,4:15,6:13,7:5`)
 - The work order is per connection and the session must stay open between ASSIGN and SUBMIT (used a detached Python socket holder).
 - A 91-token/773-char probe was rejected as "invalid probe"; 38–44 tokens (~350 chars) were accepted.
 - Used 3 of 6 probes and 1 of 8 submits; no brute force against the server.
+
+## Better approach (2026 retro)
+
+This was a garble-obfuscated static Go ELF reversed cold into a simulator. Run symbol-recovery
+*first* next time: **GoReSym** (`GoReSym -t -d -p ./dockctl` + its IDA script), **redress**, or
+**unstrip**. Go keeps `pclntab` even when stripped/garbled, so these recover function boundaries,
+types and many strings — which would have shortened building the rule simulator. The 3-probe
+candidate-gate narrowing and the untraced-binary verification (dodging the tracer-XOR anti-debug)
+were both good; keep them. See `ctf-reverse/SKILL.md` → "Stripped / garble-obfuscated Go".

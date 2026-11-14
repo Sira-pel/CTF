@@ -61,3 +61,15 @@ The same climb usually stalls at 28/30; 29 sometimes; 30 was 1 success in ~8 run
 3. **Test desk idle timeout**: connect, `ASSIGN`, wait 3-5 min (keep-alive with free `HELP`/`PLAIN` lines?), then `PROBE`. If the connection survives minutes, the flow can be: connect -> probe-identify config -> solve offline with connection held open -> `SUBMIT` on same connection.
 4. Only then continue the per-config checkpoint chain solve (checkpoint 3 -> 7 -> ... as before, but for the desk's actual configs). Verify with `./mekong-fix -p P -z Z -t /tmp/target12.txt order` printing OPEN before `SUBMIT`.
 5. Do not brute the desk; budget is 6 probes + 8 submits per connection.
+
+## Better approach (2026 retro, unsolved)
+
+The blocker was the per-connection config identifier and the slow checkpoint hill-climb.
+Two concrete new angles that don't repeat what was tried:
+1. **Emulate `vm.c`'s real binary with unicorn** to sweep the config space (profile×zone)
+   orders of magnitude faster than the aborted parallel-C launch, and without the
+   reimplementation risk — the emulator is the ground truth by construction.
+2. **Symbolically solve each checkpoint** (angr/z3) over the 48 u16 windows instead of
+   bit-flip hill-climbing that stalls at 28–29/30. A checkpoint is ~30 bits of constraint on
+   a few windows — well within z3's reach — and chaining solved checkpoints beats random restarts.
+Still honor the 6-probe / 8-submit budget: identify the config offline, solve offline, submit once.

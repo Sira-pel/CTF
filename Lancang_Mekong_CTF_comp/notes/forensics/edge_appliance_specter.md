@@ -37,3 +37,11 @@ AAD             = vpn-edge-gw01
 Plaintext is a JSON inventory. This host is `cluster_bravo` / `active_gateway` (also in `cluster.conf`), whose `beacon_token` is `tunnel_beacon`. The other tokens (`shadow_beacon`, `debug_beacon`) belong to standby and diagnostic nodes.
 
 `status/updates/crl` DNS and the `:443` streams are cover traffic.
+
+## Better approach (2026 retro)
+
+Solve was clean. Tooling speedups: parse the TCG event log with **`tpm2_eventlog`** (and
+replay PCRs with `tpm2`/a short Python extend loop) instead of reading the log by hand; reassemble
+the base32 DNS-label frames with **tshark**/scapy (`-Y dns`, pull QNAME labels, dedupe by seq,
+CRC-check) rather than manual framing. The HMAC→HKDF→AES-GCM key-chain reconstruction was the
+crux and was right.

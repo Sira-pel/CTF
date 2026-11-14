@@ -35,3 +35,18 @@
 - 25 GET probes, hand-picked: key/decrypt/flag/notes names and signed-form names under /uploads/ -> all 500 (oracle: does not exist).
 - Source/backup names outside /uploads/ (login.php.bak, ~, .swp, .env, config.php(.bak), lib/includes/src crypto.php) -> all 404.
 - Result: no new file found. Oracle behaviour confirmed (existing: 200, missing under /uploads/: 500).
+
+## Better approach (2026 retro, unsolved) — a concrete untried lead
+
+We burned effort on the SecurityBot phishing path (dead end) and offline LSENC1 cracking. The
+challenge shape — "take over the retired CTO Seng Pakrenha's account" on a **better-auth** app —
+points at better-auth's 2026 **pre-account-hijacking / account-linking** CVEs, which we never tried:
+- **Pre-account-hijacking (magic-link / email-OTP):** register the CTO's email with our own
+  password *before* it's verified, then inherit the account when he signs in.
+- **OAuth auto-link to unverified email (CVE-2026-53516):** pre-register his email locally, then
+  link our OAuth identity onto his account (the callback trusts the provider's verified flag, not
+  the local one).
+These are testable with normal auth requests (no scanner evasion, no third-party tunnels — stays
+within the CTF network rule). Check the deployed better-auth version and whether magic-link/OAuth/
+email-OTP are enabled first. See `ctf-web/SKILL.md` → "better-auth". This is a much more promising
+line than the phishing/LFI probing we exhausted.

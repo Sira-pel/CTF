@@ -247,3 +247,25 @@ Use [field-notes.md](field-notes.md) once you have confirmed the challenge is tr
 - Database: tables named `flag`, `flags`, `secret`, or seeded challenge content
 - HTTP: custom headers, archived responses, hidden routes, admin exports
 - Browser: hidden DOM nodes, `data-*` attributes, inline state objects, source maps
+
+## 2026 refresh — techniques from the Lancang-Mekong retro
+
+retired_cto used **better-auth** (the "Teamline" chat SPA). That library had a cluster of 2026
+account-takeover CVEs worth checking on sight whenever you see it (`/api/auth/sign-in/username`,
+better-auth cookies, the username→`user:host` rewrite we observed):
+- **Pre-account-hijacking (magic-link / email-OTP):** register the victim's email + your own
+  password *before* they verify; you keep password access after they start using the account.
+  Fixed 1.6.22 / 1.7.0-beta.10.
+- **OAuth auto-link to unverified email — CVE-2026-53516** (CVSS 8.3, fixed 1.6.11): the OAuth
+  callback links a provider identity to an existing local account using the *provider's* verified
+  flag without checking the *local* account's verification. Pre-register the target's email, then
+  link your OAuth identity onto it.
+- **Magic-link sign-up marks email verified — CVE-2026-114607** (fixed 1.7.7).
+- **Org-invitation takeover via unverified email — CVE-2026-53514** (7.7).
+
+Takeaway for a "take over person X's account" challenge (exactly retired_cto's shape): the
+intended path is almost certainly one of these **pre-registration / account-linking** bugs, not
+the SecurityBot phishing dead-end. General class: *pre-account-hijacking* — claim an identity
+before the legitimate user verifies it, then inherit their account on first login.
+Refs: https://corgea.com/advisories/vulnerabilities/CVE-2026-53516 ·
+https://advisories.gitlab.com/pkg/npm/better-auth/

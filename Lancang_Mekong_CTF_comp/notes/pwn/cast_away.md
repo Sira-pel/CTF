@@ -132,3 +132,14 @@ above already had the answer — confirms the export directory genuinely never c
 `/run/challenge` (the service's cwd) was the only place it lived.
 Scripts: `readfile_template.py` (generic arbitrary-path reader), `listdir_*.py` (generic
 directory lister), both proven against the local replica in `replica/` first.
+
+## Better approach (2026 retro)
+
+The 1024-byte stack-pivot + raw-syscall ROP chain worked but was the hard way. We already
+had a libc leak and an arbitrary qword write (EDIT) plus a heap address — that is exactly
+the precondition for **House of Apple 2 / FSOP**. Next time: forge an `_IO_FILE` with
+`_wide_data → _IO_wfile_jumps` (pwntools `FileStructure()`), point `_IO_list_all` or the
+leaked stdout at it, and let the exit flush call our function — no stack pivot, no gadget
+hunting, and it survives `system` being sandboxed because you call a raw `openat`/`read`/
+`write` stub directly. `system` itself was blocked by `do_system`, which is the usual
+tell that FSOP-to-syscalls beats FSOP-to-`system`. See `ctf-pwn/SKILL.md` → "House of Apple 2".

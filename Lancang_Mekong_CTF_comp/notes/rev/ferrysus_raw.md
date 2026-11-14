@@ -19,3 +19,10 @@ Record 0 is plaintext. After stage k commits, record k is XOR-decrypted with xor
 - 10, opcode 22: `acc = imm XOR gate` before the mixer. Gate `0` passes locally; the remote gate has to be folded in before `SUBMIT`.
 
 Solver: `Lancang_Mekong_CTF_comp/solved/rev_ferrysus/solve_ferry.py`.
+
+## Better approach (2026 retro)
+
+Same lesson as `ferrysus.md`: reach the validated VM model via `unicorn`/`qiling` emulation
+rather than hand-porting, and solve the mixer/pinned-entry constraints with angr/z3. The
+Pohlig–Hellman (stages 7/9) and u32 factoring (stage 8) steps were correct and fast — the
+only slow part was deriving opcode semantics, which emulation removes.

@@ -129,3 +129,17 @@ cryptographically sound from pure black-box analysis.
 Next step: this is likely source-code-dependent now (i.e. needs the actual server implementation to spot the real
 bug, rather than more blind-box guessing) — check whether this challenge has downloadable files (not just the nc
 connection) before continuing further black-box probing.
+
+## Better approach (2026 retro, unsolved)
+
+The HNP work was exhaustive and correctly ruled out magnitude-biased nonces at every bound up
+to 240 bits — don't repeat it. Two escalations that the lattice can't see, and that the large
+560-sig/session budget actually points toward:
+1. **Bleichenbacher FFT/Fourier attack** — recovers `d` from a *sub-bit* nonce bias (a fraction
+   of a bit of skew) given many thousands of signatures. This is the natural next tool after a
+   clean HNP result, and the generous budget is the hint. (collect one signer's full 560, FFT.)
+2. **Minerva** — if the real leak is nonce *bit-length* rather than top-bits-zero, ~500–2000
+   sigs suffice with a different lattice setup.
+If both come back clean, treat nonce-attacks as closed and pivot to finding downloadable source
+— a sound black-box ECDSA with no bias is usually a verifier/logic bug, not a math one.
+See `ctf-crypto/SKILL.md` → "ECDSA biased-nonce".

@@ -230,3 +230,50 @@ Use [field-notes.md](field-notes.md) once you have confirmed the challenge is tr
 - Sandbox and hybrid notes: pyjail crossover, busybox escapes, custom VMs, shell tricks, path sanitizers
 - Kernel and Windows notes: kernel playbooks, SEH, CFG bypass, privilege escalation
 - Historical case notes: older but still reusable CTF exploit patterns
+
+## 2026 refresh — techniques from the Lancang-Mekong retro
+
+Lessons folded back in after reviewing our solved pwn set (cast_away, pier_pressure,
+spillway, the_last_flush, wrap_battle). All were glibc 2.36 PIE + Full RELRO + canary.
+
+### FSOP / House of Apple 2 is the default "one leak → RCE" on glibc 2.35+
+We hand-rolled a 1024-byte stack-pivot raw-syscall ROP for cast_away and overwrote a
+`FILE` vtable to `_IO_file_jumps` for the_last_flush. The version-robust, less fiddly
+path when you have a libc leak + one arbitrary write (both of which we had) is **House
+of Apple 2**: forge an `_IO_FILE` whose `_wide_data` → `_IO_wfile_jumps` (or the wide
+vtable), so the flush path (`exit`, return from `main`, or `_IO_flush_all_lockp`) calls
+your controlled function without tripping `_IO_validate_vtable` (which only guards the
+*narrow* vtable since 2.24; wide jump tables stayed unvalidated through ~2.37).
+- Requirements: heap addr + libc leak + ability to flush IO. No `__free_hook`/`__malloc_hook`
+  (gone since 2.34), which is exactly why FSOP replaced them.
+- pwntools has `FileStructure()` to build the fake FILE without counting offsets by hand.
+- See `heap-fsop.md` for the field layout; pick offsets against the *exact* target libc.
+- Refs: https://oslike.github.io/2024/12/06/house-of-apple2 ·
+  https://hareh4ru.github.io/posts/FSOP-for-libc-2.35-and-over ·
+  original: Roderick's House of Apple posts.
+
+### Version-specific heap: know the technique index before you start
+glibc moves fast; the applicable "house" depends on the exact version.
+- **2.32+**: tcache safe-linking (`ptr ^ (addr>>12)`) → you need a heap leak to poison,
+  which we used in cast_away/last_flush. 2.32+ also aligns tcache victims (check your target).
+- **2.39+**: **House of Tangerine** (tcache/top-chunk → arbitrary malloc pointer, no hooks)
+  and **House of Water** (leakless tcache, 2.36+). Keep these for post-2.38 targets.
+- Fast lookup: shellphish how2heap "by glibc version" index —
+  https://www.mintlify.com/shellphish/how2heap/reference/by-glibc-version
+
+### Seccomp: dump the filter, don't read it by hand
+For spillway we read the allowed-syscall set out of the disassembly. Faster: run the
+binary under **`seccomp-tools dump ./bin`** to print the BPF filter directly.
+- Default ORW (open/read/write) is the usual escape; `mov rsi,rax` style gadgets to
+  thread the opened fd into read, as we did, still apply.
+- If `open`/`openat` are blocked but `openat2` (439) or the 32-bit/x32 ABI is not, use
+  those; a filter that doesn't pin the architecture is bypassable via `int 0x80` /
+  syscall-number + 0x40000000. Check `seccomp-tools` output for a missing arch check.
+- Refs: https://n132.github.io/2022/07/03/Guide-of-Seccomp-in-CTF.html
+
+### Automate the boring parts
+- `one_gadget ./libc.so.6` before writing a two-stage `system` call — a single
+  constraint-satisfying gadget often removes a whole ROP stage (pier_pressure, last_flush).
+- `angrop` / `Ropper` to auto-find pop-chains instead of eyeballing inter-function bytes.
+- HTTP desync (wrap_battle was CL.TE): frame it as a classic **CL.TE request-smuggling**
+  desync; `smuggler.py`-style differential probing finds the parser disagreement fast.

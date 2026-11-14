@@ -26,3 +26,11 @@ The service cwd holds `flag` (binary is `/srv/service`). Same contents via `./fl
 `QUERY` is a hamming oracle over the four random shipment words at `0x5048` (budget 80). Not needed: the unlock flag is writable BSS, so the chain sets it directly.
 
 Script: `Lancang_Mekong_CTF_comp/solved/pwn_spill_way_to_heaven/solve.py` (`python3 solve.py remote`).
+
+## Better approach (2026 retro)
+
+Setting the writable BSS unlock flag directly (instead of beating the QUERY hamming oracle)
+was the right shortcut — keep that instinct. The only speedup: dump the seccomp policy with
+`seccomp-tools dump ./spillway` rather than reading the allow-list out of the disassembly;
+it prints the BPF filter and instantly shows whether `open`/`openat2`/arch are pinned. The
+ORW chain with `mov rsi,rax` feeding the fd into read is the standard pattern.

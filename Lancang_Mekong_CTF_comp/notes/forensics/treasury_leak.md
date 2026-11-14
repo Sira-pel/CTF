@@ -88,3 +88,17 @@ Crib-checked about 7800 nearby keys (recipe HKDF, swapped HKDF, SHA256 of token 
 ## Session 5
 
 Full-buffer search, not just the first block: 1284 recipe keys and 2160 HKDF shape variants (counter width, role swap, no counter). No `LMC{`, `Apex`, `Cayman`, `George`, or `Horizon` anywhere in the plaintext. `bh` is not a prefix of SHA-256/SHA-1/MD5 of the msg, lnk, xlsm, ole blob, or VBA. NaCl sealed box and crypto_box, with seeds from the gateway string or the volume GUID, do not open the blob. Derived nonces (`SHA256(guid)[:12]`, `SHA256(salt)[:12]`) with the recipe key also stay random.
+
+## Better approach (2026 retro, unsolved) — a concrete untried lead
+
+Five sessions confirmed the written HKDF→AES-GCM recipe never authenticates, across ~6M
+derivations. The notes already flagged that `bh=4f8b91a78e22c9c7f18b320d` is 12 bytes, not a
+valid SHA-256 — and bh-as-nonce was tried. The untried refinement is the **DKIM body hash itself**:
+a real DKIM `bh` is `base64(SHA-256(canonicalized body))`, and a hand `sha256(utf8 body)` will
+*never* match because DKIM uses relaxed/simple canonicalization (CRLF handling, trailing-empty-line
+rules, header unfolding). Recompute `DKIM_Body_Hash` with **`dkimpy`** or `opendkim-testmsg` on the
+exact MIME body, then feed *that* digest (not the literal `bh` field) into the Salt per the recipe —
+the recipe says "DKIM_Body_Hash", which may mean the properly-canonicalized hash, not the truncated
+header value. If HKDF still fails, try **AES-GCM-SIV** (the "won't authenticate under any tag
+placement" symptom fits a nonce-misuse-resistant mode being mistaken for plain GCM). See
+`ctf-forensics/SKILL.md` → "question input types".
