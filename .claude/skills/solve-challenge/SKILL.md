@@ -3,7 +3,7 @@ name: solve-challenge
 description: Entry point for CTF challenges when the category is unclear: quick triage, then routes to ctf-crypto, ctf-reverse or ctf-pwn first, or another ctf-* skill. Skip it when the category is obvious.
 license: MIT
 compatibility: Requires filesystem-based agent with bash, Python 3, and internet access.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch WebSearch Skill
+allowed-tools: Bash Read Write Edit Glob Grep Task Skill
 metadata:
   user-invocable: "true"
   argument-hint: "[category] [challenge-file-or-url]"
@@ -53,6 +53,10 @@ If a URL is given, check for CTFd (`curl -s "$CTF_URL/api/v1/" | head -5`). If C
 ### Step 4: Pivot when stuck
 
 Re-check the category, try a second category skill (many challenges span two), look for hidden files, alternate ports, headers, source comments and metadata, and check for a simpler path (default creds, known CVE, logic bug). Also check edge cases: off-by-one, races, overflow, encoding mismatches.
+
+Process lessons from our past solves (time-boxing, decoy flags, validating tools, remote-service handling): [lessons.md](lessons.md).
+
+Common cross-category combinations: forensics+crypto (encrypted data in a capture or image), web+reverse (WASM or obfuscated JS), web+crypto (JWT or custom MAC), reverse+pwn (understand the binary first), forensics+OSINT (recover data, then trace it), misc+crypto (jail escape that needs crypto primitives).
 
 ### Step 5: Write-up
 

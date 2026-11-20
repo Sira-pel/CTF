@@ -3,7 +3,7 @@ name: ctf-misc
 description: Fallback for CTF challenges that fit no other category: encoding puzzles, pyjails, bash jails, RF/SDR, esoteric languages, QR/audio puzzles. Use only after ctf-crypto, ctf-reverse and ctf-pwn clearly do not apply; never for binaries, memory corruption or real cryptanalysis.
 license: MIT
 compatibility: Requires filesystem-based agent (Claude Code or similar) with bash, Python 3, and internet access for tool installation.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch WebSearch Skill
+allowed-tools: Bash Read Write Edit Glob Grep Task Skill
 metadata:
   user-invocable: "false"
   author: Lukasz Jagiello

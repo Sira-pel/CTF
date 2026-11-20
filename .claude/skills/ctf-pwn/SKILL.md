@@ -3,7 +3,7 @@ name: ctf-pwn
 description: Provides binary exploitation techniques for CTF challenges. Use when you already have a vulnerable native target or service and need to turn memory corruption or low-level primitives into code execution or privilege escalation, such as buffer overflows, format strings, heap bugs, ROP, ret2libc, shellcode, kernel exploitation, seccomp bypass, sandbox escape, or Windows/Linux exploit chains. Do not use it when the main blocker is understanding what the binary does; use reverse engineering first. Do not use it for pure web bugs, disk or packet forensics, or standalone crypto/math challenges.
 license: MIT
 compatibility: Requires filesystem-based agent (Claude Code or similar) with bash, Python 3, and internet access for tool installation.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch WebSearch
+allowed-tools: Bash Read Write Edit Glob Grep Task
 metadata:
   user-invocable: "false"
   author: Lukasz Jagiello
@@ -277,3 +277,13 @@ binary under **`seccomp-tools dump ./bin`** to print the BPF filter directly.
 - `angrop` / `Ropper` to auto-find pop-chains instead of eyeballing inter-function bytes.
 - HTTP desync (wrap_battle was CL.TE): frame it as a classic **CL.TE request-smuggling**
   desync; `smuggler.py`-style differential probing finds the parser disagreement fast.
+
+## Field lessons (our solves)
+
+- **Bad bytes inside addresses.** `gets()`/`scanf` stop at `0x0a` (and `strcpy` at `0x00`), including inside a little-endian address. Pick gadgets whose address bytes avoid the terminator in every position.
+- **cdecl argument cleanup in hand-built ROP chains.** A fake call to a one-argument function leaves the argument on the stack; follow it with a throwaway `pop reg; ret` so later gadgets are not misaligned.
+- **Safe-linking (glibc 2.32+).** `tcache`/fastbin `fd` is `(addr >> 12) ^ ptr`, so you need a heap leak to forge it. Overwriting `tcache_perthread_struct` avoids the mangling. Since glibc 2.34 the tcache double-free `key` is a random per-process value instead of the tcache pointer, so a UAF no longer leaks that address through it. The key is only a heuristic (the bin is still walked), and `tcache_get()` has no key check, so tcache poisoning still works. Confirm against the source of the libc you are given.
+- **glibc 2.42 (2025-07):** tcache can now cache larger blocks (tunable `glibc.malloc.tcache_max`, up to 4 MiB) and has a faster small-size path. Re-check size-class assumptions on a 2.42 target. Community claims about 2.41/2.42 beyond the official NEWS were unverified.
+- **Run the chain once, in one script.** Services that drop idle connections reset state; no pauses between stages.
+- **Confirm locally first**, including output buffering: a local pipe can hide a write that the remote socket shows directly.
+- Sources: [libc-alpha tcache key patch](https://sourceware.org/pipermail/libc-alpha/2021-July/128617.html), [glibc 2.42 release page](https://sourceware.org/glibc/wiki/Release/2.42), [Checkpoint safe-linking research](https://research.checkpoint.com/2020/safe-linking-eliminating-a-20-year-old-malloc-exploit-primitive/), [Margin Research on bypassing safe-linking](https://margin.re/2021/09/bypassing-glibc-safe-linking).

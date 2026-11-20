@@ -3,7 +3,7 @@ name: ctf-osint
 description: CTF OSINT only: public-source research, geolocation, usernames, DNS/domain lookups. Use only when the challenge asks for information gathering. Not for any file, binary or crypto analysis.
 license: MIT
 compatibility: Requires filesystem-based agent (Claude Code or similar) with bash, Python 3, and internet access for OSINT lookups.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch WebSearch
+allowed-tools: Bash Read Write Edit Glob Grep Task
 metadata:
   user-invocable: "false"
   author: Lukasz Jagiello

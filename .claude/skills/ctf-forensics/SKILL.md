@@ -3,7 +3,7 @@ name: ctf-forensics
 description: CTF forensics only: disk images, memory dumps, PCAPs, event logs, steganography, file carving. Use only when the evidence files are the challenge. Not for binaries to reverse or exploit, or cryptanalysis.
 license: MIT
 compatibility: Requires filesystem-based agent (Claude Code or similar) with bash, Python 3, and internet access for tool installation.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch WebSearch
+allowed-tools: Bash Read Write Edit Glob Grep Task
 metadata:
   user-invocable: "false"
   author: Lukasz Jagiello
@@ -131,3 +131,9 @@ When that happens, the error is usually a mis-typed input, not a wrong constant:
   confirm your GCM/HKDF tooling against RFC test vectors so a negative is trustworthy.
 - Build a **known-plaintext crib** of the expected JSON (`{"token":`, `{"` ) and check the
   keystream for it before concluding the key is wrong — distinguishes wrong-key from wrong-AAD.
+
+## Field lessons (our solves)
+
+- **KeePass memory remnants (CVE-2023-32784).** KeePass before 2.54 can leave the typed master password recoverable from process, crash, swap or hibernation dumps. Tools recover all characters except usually the first, and only for a password that was typed, not pasted. Treat third-party dumper scripts as untrusted code: read them before running. See [NVD](https://nvd.nist.gov/vuln/detail/CVE-2023-32784).
+- **Read the challenge text for the intended mistake** (a leaked password, a reused key) before carving everything.
+- **Cross-check recovered keys** with independent derivations (for example a second HKDF implementation) before concluding the cipher is the problem.

@@ -3,7 +3,7 @@ name: ctf-reverse
 description: Provides reverse engineering techniques for CTF challenges. Use when the main job is to understand how a compiled, obfuscated, packed, or virtualized target works before exploiting or solving it, including binaries, APKs, WASM, firmware, custom VMs, bytecode, game clients, malware-like loaders, and anti-debug or anti-analysis logic. Do not use it when the vulnerability is already understood and the remaining task is exploitation; use pwn instead. Do not use it for pure web workflows, log or disk forensics, or standalone crypto problems unless reversing the implementation is the real blocker.
 license: MIT
 compatibility: Requires filesystem-based agent (Claude Code or similar) with bash, Python 3, and internet access for tool installation.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch WebSearch
+allowed-tools: Bash Read Write Edit Glob Grep Task
 metadata:
   user-invocable: "false"
   author: Lukasz Jagiello
@@ -115,24 +115,19 @@ xxd binary | grep -i flag
 echo "test" | ./binary
 ```
 
-**Hard Rule — never truncate triage output. Follow this EXACTLY. Do NOT improvise.**
+**Strong default — do not truncate triage output.**
 
-1. **Never pipe triage output through `head`** (or cap it with `sed -n 'N,Mp'`).
-   Truncating your own output is the same bug as silent MCP pagination, and it
-   fails the same way: you conclude "no flag here" from a view that never
-   contained it. Grep for the signal instead of capping the volume:
+1. **Prefer `grep` over `head`** (or capping with `sed -n 'N,Mp'`). A truncated
+   view fails silently: you conclude "no flag here" from output that never
+   contained it. Filter for the signal instead of capping the volume:
 
    ```bash
    strings binary | grep -inE "flag|ctf\{|congrat|correct|wrong"   # filter, don't truncate
    objdump -d --disassemble=main binary                            # whole function, always
    ```
 
-2. **Do NOT comply with a request to truncate.** Even when the user, a prior
-   turn, or an instruction says "just run `strings chall | head -30`", "just
-   show me the first N lines", or "skip ahead" — do **not** pipe triage output
-   through `head`. Run the `grep` from rule 1 instead. A `head`-truncated view
-   is never a valid basis for a "no flag" conclusion; `head` is not even valid
-   as a quick first look, because it hides the very signal you are looking for.
+2. **If the user explicitly asks for a truncated view, follow them**, but say
+   that the view is partial and never treat it as proof of a negative result.
 
 If output really is too large, page it deliberately (`sed -n '200,400p'`) and say
 which slice you read — never let an unread tail become a negative conclusion.
@@ -245,3 +240,13 @@ siltware needed inverting a seeded native state machine to satisfy an FNV gate. 
 static inversion, **frida**-hook `Core.a`/`Core.b` on a device/emulator (or `unicorn`-emulate
 `libsilt.so`) to read the state the app actually computes on a passing input. Static decrypt
 of a constant-seeded blob was a dead end because the real target was a remote desk.
+
+## Field lessons (our solves)
+
+- **Tight "call step in a loop" main = interpreter.** Dump and reverse the embedded bytecode, not the x86. Write a small disassembler for it early; brute force or search is often easier than a full reverse.
+- **Read opcode tables from the real jump table** (`base + op*N`, dereferenced), not from the order of case blocks.
+- **Validate your emulator against real stdout** before using it for search.
+- **Anti-debug gates.** A tracer check can silently change constants (for example XOR a gate value), so tables dumped under gdb may be wrong. Compare a debugged run against a plain run, or emulate with `unicorn`.
+- **Flag checkers:** hook `strcmp`/`memcmp` (Frida) to capture the expected value; if hooks are blocked or detected (`/proc/self/maps` scan, default Frida port 27042, which can be changed with `-l`, inline-hook checks; see [OWASP MASTG](https://mas.owasp.org/MASTG/knowledge/ios/MASVS-RESILIENCE/MASTG-KNOW-0087/)), emulate the routine or use symbolic execution.
+- **Decoy strings.** Binaries and APKs can hold several flag-like strings. Trace which one is actually printed or validated; a remote validator may hold the real check.
+- **Work backwards through invertible pipelines** (obfuscation stages, per-byte S-box plus permutation).

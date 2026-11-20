@@ -3,7 +3,7 @@ name: ctf-crypto
 description: Provides cryptography attack techniques for CTF challenges. Use only when the core of the challenge is breaking a cipher, hash, signature, PRNG or math scheme (RSA, AES, ECC, lattices/LWE, Coppersmith, padding oracle, GCM, stream/block cipher weaknesses) and the source or parameters are in hand. Do not use it when the blocker is understanding a binary (use ctf-reverse), exploiting memory corruption (use ctf-pwn), or a simple encoding puzzle (use ctf-misc).
 license: MIT
 compatibility: Requires filesystem-based agent (Claude Code or similar) with bash, Python 3, and internet access for tool installation.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch WebSearch
+allowed-tools: Bash Read Write Edit Glob Grep Task
 metadata:
   user-invocable: "false"
   author: Lukasz Jagiello
@@ -150,3 +150,10 @@ the signing/combination logic (here `weld` of two seals, "repair threshold 2" â‡
 2-of-n scheme or a blinding relation). Meta-rule: once residues test uniform and all textbook
 relations fail, redirect effort from factoring to reversing *what a signature signs and how
 seals combine* â€” and flag for a source/handout check.
+
+## Field lessons (our solves)
+
+- **Biased-nonce ECDSA (HNP).** Collect many signatures from one key, build the lattice, and test several bit-bound hypotheses. Validate your lattice code on synthetic data with a known key first so a negative result means something. References: [Biased Nonce Sense (Breitner and Heninger)](https://eprint.iacr.org/2019/023.pdf).
+- **GCM vs GCM-SIV.** Plain AES-GCM with a reused nonce breaks authenticity and leaks plaintext relations. AES-GCM-SIV ([RFC 8452](https://www.rfc-editor.org/rfc/rfc8452)) is misuse-resistant: reuse only reveals whether two messages are equal. If a "GCM" tag fails to verify, check for a different AEAD before assuming a bug in your code.
+- **Use exact arithmetic** (integers, `Fraction`) for linear and differential systems.
+- **Verify a hypothesis offline against captured data** before spending any of a request budget on a live service.

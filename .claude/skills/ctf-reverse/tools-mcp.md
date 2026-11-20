@@ -488,7 +488,8 @@ If JADX-GUI is closed (or the plugin is not active) every tool returns
 running and the AI MCP plugin is active.` — a running `jadx_mcp_server` process
 proves nothing. Check with one cheap `get_cache_stats` call before starting work.
 
-**Unblock it yourself — do not ask the user to click through the GUI.** The
+**You can usually start it from the shell instead of asking the user to click
+through the GUI (tell the user before launching a GUI process).** The
 plugin is a persistent install (`jadx plugins --list` shows `jadx-ai-mcp`), so
 the only missing piece is usually a GUI process with the APK loaded. Launch it
 headless-style from the shell and wait for the port, then re-probe:

@@ -3,7 +3,7 @@ name: ctf-ai-ml
 description: CTF AI/ML only: attacking ML models, adversarial examples, model extraction, LLM jailbreak/prompt-injection puzzles. Use only when a model is the target. Not for ordinary crypto, reversing or pwn.
 license: MIT
 compatibility: Requires filesystem-based agent (Claude Code or similar) with bash, Python 3, and internet access for tool installation.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch WebSearch
+allowed-tools: Bash Read Write Edit Glob Grep Task
 metadata:
   user-invocable: "false"
   author: Lukasz Jagiello
