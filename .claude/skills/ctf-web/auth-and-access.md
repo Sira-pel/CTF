@@ -92,6 +92,8 @@ Some apps validate auth only on the initial socket upgrade and trust subsequent 
 
 ## Login Form Brute-Force
 
+> **Project rule:** online brute force against a challenge host needs the user's explicit approval (see `CLAUDE.md`). Try bypasses and offline cracking first, and keep any approved attempt small and rate-limited.
+
 CTF challenges often have weak or predictable credentials behind login forms. When no SQLi, NoSQLi, or cookie manipulation bypass is available, brute-force is the fallback — but only after narrowing the search space with intelligence from the challenge.
 
 **When to brute-force:**

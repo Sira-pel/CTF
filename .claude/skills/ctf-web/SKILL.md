@@ -3,7 +3,7 @@ name: ctf-web
 description: CTF web exploitation only: HTTP apps, APIs, browser clients, auth/JWT/OAuth flows, XSS/SQLi/SSTI/SSRF. Use only when the target is an HTTP service. Not for native binaries (ctf-reverse, ctf-pwn) or standalone crypto (ctf-crypto).
 license: MIT
 compatibility: Requires filesystem-based agent (Claude Code or similar) with bash, Python 3, and internet access for tool installation.
-allowed-tools: Bash Read Write Edit Glob Grep Task WebFetch WebSearch Skill
+allowed-tools: Bash Read Write Edit Glob Grep Task Skill
 metadata:
   user-invocable: "false"
   author: Lukasz Jagiello
@@ -152,13 +152,19 @@ curl "https://target.com/page?name={{config}}"
 curl -v -X POST https://target.com/api -H "Content-Type: application/json" -d '{}'
 ```
 
-## Login Brute-Force — Hard Rules
+## Login Brute-Force — Rules
 
-When a challenge requires brute-forcing a login form, follow these rules EXACTLY. Do NOT improvise.
+**Check the project rules first.** Online brute force against a challenge host is
+forbidden by this project's `CLAUDE.md` unless the user explicitly approves it
+for that challenge. Prefer bypasses (SQLi/NoSQLi, cookie/JWT forgery, default or
+leaked credentials found in source) and offline cracking. If the user approves
+a bounded attempt:
 
-1. **Username is ALWAYS `admin`.** Do NOT enumerate usernames. Do NOT create username lists. Even when the challenge says "弱口令" (weak password) or "常用用户名" (common usernames), those hints describe the PASSWORD — the target account is still `admin`. Only use a different username if the challenge gives a SPECIFIC different string (e.g., "the username is root").
-
-2. **Password file MUST be an existing Kali wordlist.** The default is `/usr/share/wordlists/metasploit/burnett_top_1024.txt`. Do NOT create your own password file — no `cat > passwords.txt`, no hardcoded password lists in code, no reading from a local `Top1000.txt`. Your script must read lines from the Kali wordlist file directly.
+1. **Username:** use `admin` unless the challenge names a specific account.
+   Hints like "weak password" describe the PASSWORD, not the username.
+2. **Passwords:** read an existing wordlist (default
+   `/usr/share/wordlists/metasploit/burnett_top_1024.txt`) directly instead of
+   hand-writing a list. Keep it small, rate-limited, and stop at the first hit.
 
 For complex scenarios (CSRF tokens, frontend encryption, JSON APIs, Basic Auth, threading), see the reference scripts in [auth-and-access.md](auth-and-access.md) — but those scripts must still follow the two rules above.
 
@@ -196,7 +202,7 @@ For complex scenarios (CSRF tokens, frontend encryption, JSON APIs, Basic Auth, 
 
 ## Webhook Callbacks (webhook.site)
 
-For any exploit that needs a callback URL (XSS admin bot, SSRF exfiltration, OAuth redirect abuse, blind injection with out-of-band data), use [webhook.site](https://webhook.site) to instantly receive and inspect incoming requests.
+For an exploit that needs a callback URL (XSS admin bot, SSRF exfiltration, OAuth redirect abuse, blind injection with out-of-band data), [webhook.site](https://webhook.site) can receive and show incoming requests. **It is a third-party service: anything sent there leaves your machine. Ask the user before using it, never send flags or challenge data to it unprompted, and prefer a local listener when the target can reach one.**
 
 **Create a token (get a callback URL):**
 ```bash
