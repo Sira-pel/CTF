@@ -16,7 +16,7 @@ Goal: solve the challenge and find the flag.
 
 Tools are installed manually as needed; each category skill lists its own prerequisites and checks before installing (see its Tool Availability Policy). Model choice and stop-loss rules: [difficulty-routing.md](difficulty-routing.md).
 
-Deep-dive research (two hard-challenge studies: reports, per-challenge CSV with recognition signals, source links) lives in `research/` at the repo root — on-demand reference only, don't auto-load it. Writeup links there are for after an event.
+Deep-dive research (two hard-challenge studies: reports, per-challenge CSV with recognition signals, source links) lives in `research/` at the repo root — start at `research/README.md` if you open it. On-demand reference only, don't auto-load it. Writeup links there are for after an event.
 
 ## Hypothesis First (before acting on any finding)
 
