@@ -16,6 +16,7 @@ Generate a standardized submission-style CTF writeup for a solved challenge.
 
 Default behavior:
 
+- Flag format defaults to `LMC{...}` for this team; use another format only when the challenge states one (generic `flag{` as fallback).
 - During an active competition, optimize for speed, clarity, and reproducibility
 - Keep writeups short enough that a teammate or organizer can validate the solve quickly
 - Always produce a `submission`-style writeup
@@ -35,12 +36,12 @@ Collect the following from the current session, challenge files, and user input:
 # Scan for exploit scripts and artifacts
 find . -name '*.py' -o -name '*.sh' -o -name 'exploit*' -o -name 'solve*' | head -20
 # Check for flags in output files
-grep -rniE '(flag|ctf|eno|htb|pico)\{' . 2>/dev/null
+grep -rniE '(lmc|flag|ctf|eno|htb|pico)\{' . 2>/dev/null
 ```
 
 ### Step 2: Generate Write-up
 
-Write the writeup file as `writeup.md` (or `writeup-<challenge-name>.md`) using the submission template below.
+Write the writeup file as `notes/<challenge-slug>.md` (not `writeup.md` at the repo root) using the submission template below. **In-team only: during an event keep it in `notes/` and do not share or publish it outside the team until the event ends.**
 
 ---
 
@@ -56,7 +57,7 @@ date: YYYY-MM-DD
 category: web|pwn|crypto|reverse|forensics|osint|malware|misc|ai-ml
 difficulty: easy|medium|hard
 points: <number>
-flag_format: "flag{...}"
+flag_format: "LMC{...}"
 author: "<your name or team>"
 ---
 
@@ -87,7 +88,7 @@ author: "<your name or team>"
 ## Flag
 
 \`\`\`
-flag{example_flag_here}
+LMC{example_flag_here}
 \`\`\`
 ```
 

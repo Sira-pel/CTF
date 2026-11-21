@@ -14,7 +14,7 @@ metadata:
 
 Goal: solve the challenge and find the flag.
 
-Tools: `bash scripts/install_ctf_tools.sh all` pre-installs everything. Otherwise each category skill lists its own prerequisites; install as you go. Model choice and stop-loss rules: [difficulty-routing.md](difficulty-routing.md).
+Tools are installed manually as needed; each category skill lists its own prerequisites and checks before installing (see its Tool Availability Policy). Model choice and stop-loss rules: [difficulty-routing.md](difficulty-routing.md).
 
 ## Hypothesis First (before acting on any finding)
 
@@ -23,6 +23,30 @@ Tools: `bash scripts/install_ctf_tools.sh all` pre-installs everything. Otherwis
 3. **Test each** with one cheap, read-only check first (`strings`, `checksec`, a breakpoint, a small input, one request). Escalate to fuzzing, exploit work, or full decompilation only after a cheap test supports a hypothesis.
 
 Follow the CTF rules in the project's `CLAUDE.md`.
+
+**ASK FIRST — not during an event:** scanners or bulk fuzzing (nmap, sqlmap, ffuf, gobuster, hydra, `ctf-web/scripts/async_fuzz.py`), online brute force (including canary/password brute on live hosts), writeup search (`/ctf-similar-search`, web search for writeups), and third-party services (dogbolt.org, webhook.site, public interactsh). Offline cracking, local analysis, and low-volume requests to official challenge hosts from the laptop's own IP are fine. Never run malware samples on the host.
+
+## Hard-pattern triage (10s)
+
+| If you see… | Do this first |
+|---|---|
+| Huge `.rela` / tiny `.text` | `readelf -rW -s` → reloc VM; do not start in main |
+| 3-int bytecode / "subleq" / ELVM | OISC: try I/O matrix oracle before full lift |
+| HLT / nested exceptions / RUNTIME_FUNCTION | Dump unwind / function-table callbacks offline |
+| Custom VM + `nc` | RE opcodes, then look for OOB into interpreter state |
+| Full RELRO + libc ≥ 2.34 | FSOP / exit_funcs / ROP — never `__free_hook` (removed) |
+| Seccomp | `seccomp-tools dump`; ORW via raw `syscall` gadgets (libc `open` may be `openat`) |
+| Write of a fixed buffer you don't control | Overwrite the next printed string / code ptr with that buffer |
+| Node `fs.*(req…)` | Object/URL duck-type + encoding mismatch vs WAF |
+| Flask+PHP / two parsers | HPP: first-wins vs last-wins |
+| Proxy adds a query flag | Flood past `qs` `parameterLimit` (default 1000) |
+| AES-GCM repeated IV | Forbidden attack → recover H, forge tag |
+| Pickle w/o REDUCE/NEWOBJ | BUILD → `__setstate__` |
+| AST bans `Call` | Decorator or `raise E` with dunder (`Exception.__getitem__`) |
+| LLM "don't reveal flag" | Side-channel verify / confuse gate model |
+| Pcap + memory dump | SSLKEYLOG / CS key extract before guessing crypto |
+
+Event flag: `LMC{...}`. Notes: `notes/<challenge>.md`.
 
 ## Workflow
 
@@ -60,7 +84,7 @@ Common cross-category combinations: forensics+crypto (encrypted data in a captur
 
 ### Step 5: Write-up
 
-Invoke `/ctf-writeup` after solving.
+Invoke `/ctf-writeup` after solving. Mid-event it writes team-only notes to `notes/<challenge>.md`; never share or publish a writeup until the event ends.
 
 ## Flags
 

@@ -13,6 +13,8 @@ metadata:
 
 Quick reference for RE challenges. For detailed techniques, see supporting files.
 
+> Hypothesis first: list 2–3 candidate bugs with evidence, rank by likelihood and test cost, and run one cheap light test per hypothesis (strings/checksec/one input) — build tooling or exploits only after a test supports it.
+
 ## Tool Availability Policy
 
 Before installing anything below, check whether the tool/package already exists on this machine (`which <tool>`, `command -v <tool>`, `<tool> --version`, `pip show <pkg>`, etc.) and just use it if so. Only when something required is genuinely missing, tell the user which tool/package is missing and why the task needs it, then ask them to install it (or confirm before installing it yourself) — do not install new tools silently.
@@ -84,6 +86,14 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 - If the binary is a real malware sample with C2, packing, or evasion behavior, switch to `/ctf-malware`.
 - If the challenge is a toy VM, encoding puzzle, or pyjail rather than a real binary, switch to `/ctf-misc`.
 
+## Weird-target recognition (check before deep RE)
+
+- Almost no code + huge `.rela`/`.dynsym` → ELF reloc VM: `readelf -rW -s`, map reloc types to ops, emulate in order (self-modifying; don't trust IDA's applied relocs), lift checks to Z3.
+- Bytecode as `a b c` triples, constants near 2^24 → SUBLEQ/OISC/ELVM: find the interpreter loop, try a black-box linear I/O oracle before lifting.
+- Deliberate HLT/UD2, `RtlInstallFunctionTableCallback` → exception/unwind-table VM: dump the RUNTIME_FUNCTION chain offline instead of single-stepping.
+- Huge nested lambdas / combinators → Church encoding: identify TRUE/SUCC/ADD/PAIR, rewrite as plain Python ops.
+- Tiny bytecode + short opcode switch → stack VM: write a disassembler, invert the transform chain from the end of the flag.
+
 ## Problem-Solving Workflow
 
 1. **Start with strings extraction** - many easy challenges have plaintext flags
@@ -93,13 +103,13 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 5. **Try Qiling** - emulate foreign-arch binaries or bypass heavy anti-debug without artifacts
 6. **Map control flow** before modifying execution
 7. **Automate manual processes** via scripting (r2pipe, Frida, angr, Python)
-8. **Validate assumptions** by comparing decompiler outputs (dogbolt.org for side-by-side)
+8. **Validate assumptions** by comparing decompiler outputs locally (e.g. Ghidra vs r2 `pdg`). Do not upload the binary to dogbolt.org or other third-party decompiler sites — ASK FIRST, never mid-event.
 
 ## Quick Wins (Try First!)
 
 ```bash
 # Plaintext flag extraction
-strings binary | grep -E "flag\{|CTF\{|pico"
+strings binary | grep -E "LMC\{|flag\{|CTF\{"
 strings binary | grep -iE "flag|secret|password"
 rabin2 -z binary | grep -i "flag"
 
@@ -165,7 +175,7 @@ Two patterns: (1) `transform(flag) == stored_target` — reverse the transform. 
 ## Common Encryption Patterns
 
 - XOR with single byte - try all 256 values
-- XOR with known plaintext (`flag{`, `CTF{`)
+- XOR with known plaintext (`LMC{`, `flag{`, `CTF{`)
 - RC4 with hardcoded key
 - Custom permutation + XOR
 - XOR with position index (`^ i` or `^ (i & 0xff)`) layered with a repeating key

@@ -3,8 +3,8 @@
 > **Upstream:** [swisskyrepo/PayloadsAllTheThings](https://github.com/swisskyrepo/PayloadsAllTheThings) — MIT License, Copyright (c) 2019 Swissky.
 > Exemplar payloads below are copied with attribution under MIT. Bulk payloads require a clone (see Installation).
 
-**Pinned version:** `3ac2790` (master @ 2026-08-27) — update with `bash scripts/install_ctf_tools.sh pat --verify` or `git -C ~/.ctf-tools/PayloadsAllTheThings rev-parse --short HEAD`.
-If the hash above is stale, the install script always fetches current `master`.
+**Pinned version:** `3ac2790` (master @ 2026-08-27) — check with `git -C ~/.ctf-tools/PayloadsAllTheThings rev-parse --short HEAD` (or `git -C ctf-web/payloads/PayloadsAllTheThings rev-parse --short HEAD`).
+If the hash is stale, `git pull --ff-only` in the clone fetches current `master`.
 
 ## How to use this index
 
@@ -204,16 +204,7 @@ Use local files to understand *why* a class works; use PAT to enumerate *all* va
 
 ## Installation
 
-Preferred (installer handles clone + symlink + verify):
-
-```bash
-bash scripts/install_ctf_tools.sh pat        # clone/update PAT
-bash scripts/install_ctf_tools.sh all        # includes PAT + all other tools
-bash scripts/install_ctf_tools.sh --verify   # prints: PAT <short-sha> at <path>
-bash scripts/install_ctf_tools.sh --dry-run pat  # preview without changes
-```
-
-Manual alternative:
+Clone on demand:
 
 ```bash
 PAT_DIR="$HOME/.ctf-tools/PayloadsAllTheThings"
@@ -238,8 +229,6 @@ Update existing clone:
 
 ```bash
 git -C ~/.ctf-tools/PayloadsAllTheThings pull --ff-only
-# or with installer
-bash scripts/install_ctf_tools.sh pat --force
 ```
 
 All PAT paths are gitignored (`ctf-web/payloads/`, `PayloadsAllTheThings/`, `.ctf-tools/`). No PAT files are vendored.

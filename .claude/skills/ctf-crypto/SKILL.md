@@ -100,6 +100,10 @@ python3 -c "from sympy import factorint; print(factorint(<n>))"
 # Sage alternative: sage -c "print(factor(<n>))"
 ```
 
+## Pattern combos
+
+- LCG control → tiny RSA exponent → Coppersmith (BBBB-class): if you choose the LCG multiplier `a`, pick a nontrivial root of unity so the state cycles short → the RSA public exponent collapses (e.g. to 11). Collect a few ciphertexts under that `e`, CRT them, then `small_roots` on `f(x) = (x·2^k + known)^e − c`. Signal: "send seed / a / c" for an LCG feeding RSA.
+
 ## Detailed Sections
 
 Technique-by-technique notes (the long tail) live in [details.md](details.md). Read it, or grep it for your keyword, once the quick start and the topic files above have not settled the challenge.

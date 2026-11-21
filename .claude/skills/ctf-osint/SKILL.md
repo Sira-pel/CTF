@@ -36,6 +36,8 @@ brew install whois bind nmap exiftool imagemagick curl
 
 **MCP servers (optional):** Playwright MCP ([microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp)) for browser-driven OSINT (JS-rendered pages, reverse-image/map flows) — see [tools-mcp.md](tools-mcp.md).
 
+> **Scans (nmap etc.):** only low-volume fingerprinting of official challenge targets, from the laptop's own IP. ASK FIRST for anything broader — no port sweeps, no scanning of the game server, other teams, or real infrastructure.
+
 ## Additional Resources
 
 - [social-media.md](social-media.md) - Twitter/X (user IDs, Snowflake timestamps, syndication API, memory.lol, Wayback CDX), Tumblr (blog checks, post JSON, avatars), BlueSky search + API, Unicode homoglyph steganography, Discord API, username OSINT (namechk, whatsmyname, Osint Industries), username metadata mining (postal codes), platform false positives, multi-platform chains, Strava fitness route OSINT

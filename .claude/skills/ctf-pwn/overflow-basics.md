@@ -253,6 +253,8 @@ p.sendline(payload)
 
 ## Stack Canary Byte-by-Byte Brute Force on Forking Servers
 
+> **ASK FIRST:** this is online brute force against a live service — project rules forbid it without explicit user approval, and never as a default step during an event. Keep the technique for approved/practice targets.
+
 **Pattern:** Server calls `fork()` for each connection. The child process inherits the same canary value. Brute-force the canary one byte at a time — each wrong byte crashes the child, but the parent continues with the same canary.
 
 **Canary structure:** First byte is always `\x00` (prevents string function leaks). Remaining 7 bytes are random. Total: 8 bytes on x86-64, 4 on x86-32.
