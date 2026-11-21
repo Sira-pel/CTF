@@ -146,8 +146,8 @@ bash -c '{ echo "cmd1"; echo "cmd2"; sleep 1; } | nc host port'
 
 **Quick decision tree:**
 - Partial RELRO + No PIE -> GOT overwrite (easiest, use fixed addresses)
-- Full RELRO -> FSOP / House of Apple 2 / `_IO_obstack_jumps`, `exit_funcs`, or return addresses. `__free_hook`/`__malloc_hook` were REMOVED in glibc 2.34+ — only consider them on a confirmed old libc
-- Modern-libc order: leak → FSOP (`_IO_obstack_jumps`/`_IO_wfile_jumps`, house-of-*) → `exit_funcs`/`__call_tls_dtors` → stack ROP/ORW
+- Full RELRO -> FSOP / House of Apple 2 (`_IO_wfile_jumps`), `exit_funcs`, or return addresses. `__free_hook`/`__malloc_hook` were REMOVED in glibc 2.34+ — only consider them on a confirmed old libc
+- Modern-libc order: leak → FSOP (`_IO_wfile_jumps`, house-of-*) → `exit_funcs`/`__call_tls_dtors` → stack ROP/ORW
 - `run.sh` + `bzImage`/`.ko`, custom QEMU `-device`, or patched `d8` + `.diff` → open [kernel-vm-escape.md](kernel-vm-escape.md); CET/IBT (`endbr64` everywhere) → ROP/JOP only to `endbr64`-valid targets (SROP helps only in some setups)
 - Stack canary present -> prefer heap-based attacks or leak canary first
 
@@ -255,7 +255,7 @@ your controlled function without tripping `_IO_validate_vtable` (which only guar
   (gone since 2.34), which is exactly why FSOP replaced them.
 - pwntools has `FileStructure()` to build the fake FILE without counting offsets by hand.
 - See `heap-fsop.md` for the field layout; pick offsets against the *exact* target libc.
-- `_IO_obstack_jumps` variant (babyfile-class): fake FILE so the flush path calls `_IO_obstack_overflow` → controlled `chunkfun(extra_arg)` ≈ `system("/bin/sh")`. It works even where hooks still exist (babyfile was glibc 2.31) — the point is that it's the option when wfile FSOP paths are constrained, not a hooks-era marker.
+- `_IO_obstack_jumps` variant (babyfile-class): fake FILE so the flush path calls `_IO_obstack_overflow` → controlled `chunkfun(extra_arg)` ≈ `system("/bin/sh")`. Works ~glibc 2.32–2.36 (original babyfile was 2.31); the obstack vtable was hardened in glibc 2.37 (bug 27124), so on 2.37+ use `_IO_wfile_jumps` / House of Apple 2 instead. Reach for it only when wfile FSOP paths are constrained on an older target.
 - Refs: https://oslike.github.io/2024/12/06/house-of-apple2 ·
   https://hareh4ru.github.io/posts/FSOP-for-libc-2.35-and-over ·
   original: Roderick's House of Apple posts.
