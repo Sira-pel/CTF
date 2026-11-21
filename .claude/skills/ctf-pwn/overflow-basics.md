@@ -253,7 +253,7 @@ p.sendline(payload)
 
 ## Stack Canary Byte-by-Byte Brute Force on Forking Servers
 
-> **Note:** this is online brute force against a live service — follow the event's rules (ask if unsure); never target the platform/scoreboard. Prefer it only when a bounded byte-at-a-time oracle is the intended solve.
+> **Note:** online brute force is allowed against challenge targets; no DoS; never target the scoreboard/platform. Use it only when a bounded byte-at-a-time oracle is the intended solve.
 
 **Pattern:** Server calls `fork()` for each connection. The child process inherits the same canary value. Brute-force the canary one byte at a time — each wrong byte crashes the child, but the parent continues with the same canary.
 

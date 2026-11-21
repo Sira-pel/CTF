@@ -26,7 +26,7 @@ Deep-dive research (two mixed-difficulty-challenge studies: reports, per-challen
 
 Follow the CTF rules in the project's `CLAUDE.md`.
 
-**Hard rule:** never attack the CTF platform/scoreboard/infrastructure — or other teams or the venue — to find answers; only interact with challenge targets as intended. Heavy scanning, bulk fuzzing (nmap, sqlmap, ffuf, gobuster, `ctf-web/scripts/async_fuzz.py`), and online brute force against challenge hosts follow the event's own rules — ask if unsure. Offline cracking and internet use (writeup search, dogbolt.org, webhook.site, libc.rip) are fine. Ask before sudo, installs, or running unknown binaries; never run malware samples on the host.
+**Hard rules:** never attack the CTF event site (scoreboard, flag-submission portal, hosting platform, or infrastructure) — or other teams or the venue; the challenge targets and files themselves are fair game. Scanning, fuzzing, and online brute force against challenge targets are fine; **no DoS**. Offline cracking is always OK. Internet use and outside sites (dogbolt.org, webhook.site, libc.rip) are allowed from the laptop's own IP (no VPN/proxy/Tor/cloud runners); looking up writeups of the **current** event needs asking first (past-event writeups are fine). Ask before sudo, installs, or running unknown binaries; never run malware samples on the host.
 
 ## Hard-pattern triage (10s)
 

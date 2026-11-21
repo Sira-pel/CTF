@@ -36,7 +36,7 @@ brew install whois bind nmap exiftool imagemagick curl
 
 **MCP servers (optional):** Playwright MCP ([microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp)) for browser-driven OSINT (JS-rendered pages, reverse-image/map flows) — see [tools-mcp.md](tools-mcp.md).
 
-> **Scans (nmap etc.):** keep them bounded and follow the event's rules (ask if unsure). Never scan the platform/scoreboard, other teams, or the venue.
+> **Scans (nmap etc.):** allowed against challenge targets — no DoS. Never scan the event site (scoreboard/platform), other teams, or the venue.
 
 ## Additional Resources
 

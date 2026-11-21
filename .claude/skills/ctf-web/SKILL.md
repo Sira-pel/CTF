@@ -67,7 +67,7 @@ brew install hashcat jq curl
 - [cves.md](cves.md) - CVE-driven techniques you can match against challenge banners, headers, dependency leaks, or version strings
 - [field-notes.md](field-notes.md) - Long-form exploit notes: quick references for SQLi, XSS, LFI, JWT, SSTI, SSRF, command injection, XXE, deserialization, race conditions, auth bypass, and multi-stage chains
 - [tools-mcp.md](tools-mcp.md) - MCP server integration for web: Playwright MCP (admin-bot DOM XSS reproduction, live DOM/console/network inspection, `browser_network_requests` lists endpoints but only `browser_network_request part="response-body"` returns payloads) and Burp Suite official MCP (27 tools, approval gates that block the agent on a modal dialog, target triple decoupling socket from `Host:` header, `normalizeHttpContent` rewriting CR/LF in the request prelude, map-based HTTP/2 that cannot express duplicate headers, `send_to_intruder` stages only, proxy history truncating items at 5000 chars, Collaborator `payloadId`/`customData` Pro-only); when to use each vs curl and scripted requests
-- [python-requests.md](python-requests.md) - Python requests toolkit: session scaffold, payload deploy from pat-reference.md wordlists, header/param spray, cookie/JWT, proxy. `scripts/async_fuzz.py` (100 concurrent) is a bulk fuzzer — use sparingly and follow the event's rules (ask if unsure)
+- [python-requests.md](python-requests.md) - Python requests toolkit: session scaffold, payload deploy from pat-reference.md wordlists, header/param spray, cookie/JWT, proxy. `scripts/async_fuzz.py` (100 concurrent) is a bulk fuzzer — fine against challenge targets, no DoS
 - [pat-reference.md](pat-reference.md) — PayloadsAllTheThings index: bulk payloads for XSS/SQLi/SSRF/SSTI/LFI/Command Injection/Upload (requires PAT clone, see Prerequisites)
 - [client-side-chains.md](client-side-chains.md) - Open on demand: admin-bot chains (bfcache, service workers, header-too-large, DOM clobbering, mXSS), server-side parser gaps (smuggling, response splitting, YAML, Next.js image cache), Java RMI/Hessian deserialization
 
@@ -81,11 +81,11 @@ brew install hashcat jq curl
 
 ## Similar Writeups
 
-Stuck? Follow the `/ctf-similar-search` skill (Tavily API) with challenge-specific identifiers — competition + challenge name (≤3 words) or unique code/error strings, never generic terms like "SSRF" or "XSS". Queries go to a third-party API.
+Stuck? Follow the `/ctf-similar-search` skill (Tavily API) with challenge-specific identifiers — competition + challenge name (≤3 words) or unique code/error strings, never generic terms like "SSRF" or "XSS". Past/other-event writeups are fine to pull; for a challenge from the **current** event, ask the user first (project rule). Queries go to a third-party API.
 
 ## Manual-analysis default
 
-Read the source, hand-craft single requests, hunt parser mismatches — usually faster than scanning. If you do scan or fuzz (sqlmap/ffuf/gobuster/`scripts/async_fuzz.py`), keep it bounded and follow the event's own rules (ask if unsure); never attack the platform/scoreboard. High-value patterns (details: [server-side.md](server-side.md), [server-side-advanced.md](server-side-advanced.md), [node-and-prototype.md](node-and-prototype.md)):
+Read the source, hand-craft single requests, hunt parser mismatches — usually faster than scanning. If you do scan or fuzz (sqlmap/ffuf/gobuster/`scripts/async_fuzz.py`), that's allowed against challenge targets — keep it bounded, no DoS, and never attack the scoreboard/platform. High-value patterns (details: [server-side.md](server-side.md), [server-side-advanced.md](server-side-advanced.md), [node-and-prototype.md](node-and-prototype.md)):
 
 - Node `fs.readFileSync(user)` + WAF: Express `file[a]=` builds an object; Node duck-types URLs (`.href` + `.origin`) — `?file[protocol]=file:&file[hostname]=&file[pathname]=fla%2567.txt`; double-encode banned substrings (`%2567` → `g`).
 - `qs`/Express `parameterLimit=1000`: if a proxy appends `&proxy=nginx`, send ≥1000 params so the append is dropped.
@@ -147,7 +147,7 @@ curl -v -X POST https://target.com/api -H "Content-Type: application/json" -d '{
 
 ## Login Brute-Force — Rules
 
-**Check the event's rules first.** Heavy/online brute force against a challenge host must follow the event's own rules (ask if unsure); never target the platform or scoreboard. Prefer bypasses (SQLi/NoSQLi, cookie/JWT forgery, default or
+**Check the event's rules first.** Brute force against challenge targets is allowed; no DoS, and never target the scoreboard/platform. Prefer bypasses (SQLi/NoSQLi, cookie/JWT forgery, default or
 leaked credentials found in source) and offline cracking. If brute-forcing is appropriate, keep it bounded:
 
 1. **Username:** use `admin` unless the challenge names a specific account.

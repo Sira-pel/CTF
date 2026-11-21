@@ -157,7 +157,7 @@ bash -c '{ echo "cmd1"; echo "cmd2"; sleep 1; } | nc host port'
 2. Check protections: `checksec --file=binary`
 3. No PIE + No canary = direct ROP
 4. Canary leak via format string or partial overwrite
-5. Canary byte-by-byte on forking servers (7*256 attempts max) is online brute force — follow the event's rules (ask if unsure)
+5. Canary byte-by-byte on forking servers (7*256 attempts max) — allowed against challenge targets; no DoS
 
 **ret2win with magic value:** Overflow -> `ret` (alignment) -> `pop rdi; ret` -> magic -> win(). **Stack alignment:** SIGSEGV in `movaps` = add extra `ret` gadget. **Offset:** buffer at `rbp - N`, return at `rbp + 8`, total = N + 8. **Input filtering:** assert payload avoids `memmem()` banned strings. **Gadgets:** `ROPgadget --binary binary | grep "pop rdi"`, or pwntools `ROP()` for hidden gadgets in CMP immediates. See [overflow-basics.md](overflow-basics.md) for full exploit code.
 

@@ -13,7 +13,7 @@ metadata:
 
 # CTF Similar Challenge Search
 
-> **Note:** this sends your search terms (possibly challenge text or code) to a third-party API (Tavily) and is designed to find writeups. Allowed per project rules; keep queries focused so results stay useful.
+> **Note:** this sends your search terms (possibly challenge text or code) to a third-party API (Tavily) and is designed to find writeups. Past/other-event writeups are fine; for a challenge from the **current** event, ask the user first (project rule). Keep queries focused so results stay useful.
 
 Search for similar CTF challenge writeups using Tavily API.
 
