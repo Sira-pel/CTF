@@ -77,6 +77,7 @@ gem install one_gadget seccomp-tools
 - [kernel-techniques.md](kernel-techniques.md) - Kernel exploitation techniques: tty_struct kROP (fake vtable + stack pivot), AAW via ioctl register control, userfaultfd race stabilization, SLUB allocator internals (freelist hardening/obfuscation), leak via kernel panic, MADV_DONTNEED race window extension (DiceCTF 2026), cross-cache CPU-split attack (DiceCTF 2026), PTE overlap file write (DiceCTF 2026), addr_limit bypass via failed file open for kernel memory read/write
 - [kernel-bypass.md](kernel-bypass.md) - Kernel protection bypass: KASLR/FGKASLR bypass (__ksymtab), KPTI bypass (swapgs trampoline, signal handler, modprobe_path/core_pattern via ROP), SMEP/SMAP bypass, GDB kernel module debugging, initramfs/virtio-9p workflow, exploit templates, exploit delivery
 - [field-notes.md](field-notes.md) - Detailed pwn notes: heap exploitation quick reference, additional exploit notes, useful commands
+- [kernel-vm-escape.md](kernel-vm-escape.md) - Hard-target quick recipes (open on demand): kernel pwn unpack→debug→primitive ladder, QEMU custom-device escape, V8/d8 addrOf/fakeObj + sandbox escape, CET/IBT → SROP/JOP
 - [attack-playbook.md](attack-playbook.md) - Linux userland attack playbook: recon of input/privilege boundaries, leak selection by mitigation, and primitive ranking workflow
 - [static-signals.md](static-signals.md) - Exploit-relevant static signals (libc version, seccomp policy, RELRO/PIE/canary/NX evidence) for exploitability assessment
 - [tools-mcp.md](tools-mcp.md) - MCP server integration for pwn: WinDbg MCP session model (`open_cdb_dump`/`open_cdb_remote`/`open_kd_session` + `session_id`), crash-dump triage, in-dump `flag{` memory scanning, live breakpoint/hardware-watchpoint/memory-patch exploitation, `!dh -f` Windows mitigation check (the `checksec` equivalent), kernel-mode token stealing with kd; IDA/Ghidra MCP for exploit development (decompile the vulnerable function first, drop to assembly only for exact gadget bytes)
@@ -147,6 +148,7 @@ bash -c '{ echo "cmd1"; echo "cmd2"; sleep 1; } | nc host port'
 - Partial RELRO + No PIE -> GOT overwrite (easiest, use fixed addresses)
 - Full RELRO -> FSOP / House of Apple 2 / `_IO_obstack_jumps`, `exit_funcs`, or return addresses. `__free_hook`/`__malloc_hook` were REMOVED in glibc 2.34+ — only consider them on a confirmed old libc
 - Modern-libc order: leak → FSOP (`_IO_obstack_jumps`/`_IO_wfile_jumps`, house-of-*) → `exit_funcs`/`__call_tls_dtors` → stack ROP/ORW
+- `run.sh` + `bzImage`/`.ko`, custom QEMU `-device`, or patched `d8` + `.diff` → open [kernel-vm-escape.md](kernel-vm-escape.md); CET/IBT (`endbr64` everywhere) → SROP/JOP, not classic ROP
 - Stack canary present -> prefer heap-based attacks or leak canary first
 
 ## Stack Buffer Overflow

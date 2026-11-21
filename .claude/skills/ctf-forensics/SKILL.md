@@ -92,6 +92,13 @@ vol -f memory.dmp windows.filescan
 
 See [disk-and-memory.md](disk-and-memory.md) for full Volatility plugin reference, VM forensics, and coredump analysis.
 
+## Hard-100 quick additions
+
+- Windows artifacts (EVTX/SAM/GPP/macro) one-liners: [windows.md](windows.md#quick-recipes-hard-100-pass).
+- HTTP object carving: `tshark -r cap.pcapng --export-objects http,out/`; unknown app protocol: script it in scapy after Wireshark "Follow stream".
+- Audio: spectrogram first (`sox in.wav -n spectrogram -o s.png`), then FFT bins with numpy.
+- ESP32 firmware: `esptool.py image_info`; app partition is Xtensa → Ghidra Xtensa plugin.
+
 ## Detailed Sections
 
 Technique-by-technique notes (the long tail) live in [details.md](details.md). Read it, or grep it for your keyword, once the quick start and the topic files above have not settled the challenge.

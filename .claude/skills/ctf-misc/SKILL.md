@@ -92,6 +92,8 @@ python3 -c "__import__('os').system('id')"
 - AST bans `Call`: decorator escape, or `class E(Exception): __getitem__ = os.system` then `raise E` / `except E as e: e["/bin/sh"]` — calls code without `ast.Call`. See [pyjails.md](pyjails.md).
 - Restricted pickle (no REDUCE/INST/OBJ/NEWOBJ): use **BUILD** to rebind `__setstate__`, grabbing callables via GLOBAL from `__main__`/pickle internals — no REDUCE needed. See [pyjails.md](pyjails.md).
 - JSFuck with broken `Array.toString`: rebuild chars via `Number.prototype.toString(radix)`; prefer dynamic `import("fs")` when `require` is gone.
+- Audit-hook sandbox (`sys.addaudithook`): find actions that raise no audit event, or code that runs before/after the hook. Source/AST filter but `exec` of a code object: build `types.CodeType(...)` with your bytecode. Pickle scanner: exploit the parser differential (scanner vs `pickle.loads`) and memo (`PUT`/`GET`) to hide imports; a C++/custom pickle parser is pwn, not misc.
+- Reading a blocked flag on Linux: `/proc/self/map_files/*`, `/proc/self/mem`, `/proc/self/fd/*`, `/proc/self/syscall` can expose it when `open(flag)` is filtered; tar/zip symlink tricks exploit checker-vs-extractor differentials.
 
 ## Detailed Sections
 

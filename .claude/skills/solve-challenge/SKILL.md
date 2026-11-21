@@ -16,6 +16,8 @@ Goal: solve the challenge and find the flag.
 
 Tools are installed manually as needed; each category skill lists its own prerequisites and checks before installing (see its Tool Availability Policy). Model choice and stop-loss rules: [difficulty-routing.md](difficulty-routing.md).
 
+Deep-dive research (two hard-challenge studies: reports, per-challenge CSV with recognition signals, source links) lives in `research/` at the repo root — on-demand reference only, don't auto-load it. Writeup links there are for after an event.
+
 ## Hypothesis First (before acting on any finding)
 
 1. **List 2-3 hypotheses** for what the bug, check, or vulnerability is, each with its evidence.
@@ -45,6 +47,15 @@ Follow the CTF rules in the project's `CLAUDE.md`.
 | AST bans `Call` | Decorator or `raise E` with dunder (`Exception.__getitem__`) |
 | LLM "don't reveal flag" | Side-channel verify / confuse gate model |
 | Pcap + memory dump | SSLKEYLOG / CS key extract before guessing crypto |
+| `run.sh` + `qemu-system` + `bzImage`/`.ko` | Kernel pwn → `/ctf-pwn` kernel path (`kernel-vm-escape.md`) |
+| QEMU launched with custom `-device` | Device escape: reverse MMIO/PIO handlers in the QEMU binary |
+| Patched `d8`/`js` shell + `.diff` | Browser pwn: read the diff; goal = addrOf/fakeObj → AAR/AAW |
+| Unknown `e_machine` (Hexagon, TILE-Gx, SM83…) | Find emulator/qemu-user + Ghidra processor plugin before reading bytes |
+| Big `.debug_*`/DWARF, tiny code | Logic may live in DWARF expressions → `readelf --debug-dump` |
+| `.sys`/`.ko` as the "checker" | Find the ioctl dispatch, then the input path into it |
+| WebGL/shader source in a "rev" | Logic is in the shader; port GLSL to Python and solve |
+| Rust/Nim/Go binary | Rename runtime noise first; find user `main`, then the comparison |
+| Admin bot + strict CSP | Client-side chain → `/ctf-web` `client-side-chains.md` |
 
 Event flag: `LMC{...}`. Notes: `notes/<challenge>.md`.
 

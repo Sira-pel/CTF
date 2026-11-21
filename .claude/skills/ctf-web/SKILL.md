@@ -69,6 +69,7 @@ brew install hashcat jq curl
 - [tools-mcp.md](tools-mcp.md) - MCP server integration for web: Playwright MCP (admin-bot DOM XSS reproduction, live DOM/console/network inspection, `browser_network_requests` lists endpoints but only `browser_network_request part="response-body"` returns payloads) and Burp Suite official MCP (27 tools, approval gates that block the agent on a modal dialog, target triple decoupling socket from `Host:` header, `normalizeHttpContent` rewriting CR/LF in the request prelude, map-based HTTP/2 that cannot express duplicate headers, `send_to_intruder` stages only, proxy history truncating items at 5000 chars, Collaborator `payloadId`/`customData` Pro-only); when to use each vs curl and scripted requests
 - [python-requests.md](python-requests.md) - Python requests toolkit: session scaffold, payload deploy from pat-reference.md wordlists, header/param spray, cookie/JWT, proxy. `scripts/async_fuzz.py` (100 concurrent) is a bulk fuzzer — ASK FIRST, never a default step mid-event
 - [pat-reference.md](pat-reference.md) — PayloadsAllTheThings index: bulk payloads for XSS/SQLi/SSRF/SSTI/LFI/Command Injection/Upload (requires PAT clone, see Prerequisites)
+- [client-side-chains.md](client-side-chains.md) - Open on demand: admin-bot chains (bfcache, service workers, header-too-large, DOM clobbering, mXSS), server-side parser gaps (smuggling, response splitting, YAML, Next.js image cache), Java RMI/Hessian deserialization
 
 ## When to Pivot
 
@@ -179,7 +180,7 @@ For complex scenarios (CSRF tokens, frontend encryption, JSON APIs, Basic Auth, 
 
 - SQL errors, odd filtering, or state-dependent DB behavior: start with [sql-injection.md](sql-injection.md).
 - Templating, file reads, SSRF, command execution, XML, or parser bugs: start with [server-side.md](server-side.md) and [server-side-exec.md](server-side-exec.md).
-- XSS, CSP bypass, admin bot, client routing, DOM issues, or scriptless exfiltration: start with [client-side.md](client-side.md).
+- XSS, CSP bypass, admin bot, client routing, DOM issues, or scriptless exfiltration: start with [client-side.md](client-side.md). Admin bot + strict CSP, response splitting, or a Java endpoint → [client-side-chains.md](client-side-chains.md).
 - Session forgery, hidden admin routes, JWT, OAuth, SAML, or weak trust boundaries: start with [auth-and-access.md](auth-and-access.md), [auth-jwt.md](auth-jwt.md), and [auth-infra.md](auth-infra.md).
 - Node.js apps, prototype pollution, VM sandboxes, or SSRF into internal services: add [node-and-prototype.md](node-and-prototype.md).
 - Smart contract frontends or blockchain-integrated apps: add [web3.md](web3.md).

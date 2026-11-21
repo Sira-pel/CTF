@@ -73,6 +73,7 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 - [platforms.md](platforms.md) - Platform-specific RE: macOS/iOS (Mach-O, code signing, Objective-C runtime, Swift, dyld, jailbreak bypass), embedded/IoT firmware (binwalk, UART/JTAG/SPI extraction, ARM/MIPS, RTOS), kernel drivers (Linux .ko, eBPF, Windows .sys), game engines (Unreal Engine, Unity, anti-cheat, Lua), automotive CAN bus
 - [platforms-hardware.md](platforms-hardware.md) - Hardware and advanced architecture RE: HD44780 LCD controller GPIO reconstruction, RISC-V advanced (custom extensions, privileged modes, debugging), ARM64/AArch64 reversing and exploitation (calling convention, ROP gadgets, qemu-aarch64-static emulation)
 - [field-notes.md](field-notes.md) - Quick reference notes: binary types, anti-debugging bypass, specialized patterns, CTF case notes
+- [exotic-targets.md](exotic-targets.md) - Open on demand: exotic-arch triage (emulator + Ghidra processor), logic hidden in DWARF/printf/DVD/shaders/regex/Markov machines, Windows `.sys`/Linux `.ko` IOCTL dispatch, big custom VMs, Rust/Nim noise
 
 ---
 
@@ -93,6 +94,7 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 - Deliberate HLT/UD2, `RtlInstallFunctionTableCallback` → exception/unwind-table VM: dump the RUNTIME_FUNCTION chain offline instead of single-stepping.
 - Huge nested lambdas / combinators → Church encoding: identify TRUE/SUCC/ADD/PAIR, rewrite as plain Python ops.
 - Tiny bytecode + short opcode switch → stack VM: write a disassembler, invert the transform chain from the end of the flag.
+- Unknown `e_machine`, ROM/console file, `.sys`/`.ko` "checker", DWARF-heavy ELF, or shader/printf logic → [exotic-targets.md](exotic-targets.md) (emulator + Ghidra processor first; ioctl dispatch; logic often lives outside the code).
 
 ## Problem-Solving Workflow
 

@@ -104,6 +104,17 @@ python3 -c "from sympy import factorint; print(factorint(<n>))"
 
 - LCG control → tiny RSA exponent → Coppersmith (BBBB-class): if you choose the LCG multiplier `a`, pick a nontrivial root of unity so the state cycles short → the RSA public exponent collapses (e.g. to 11). Collect a few ciphertexts under that `e`, CRT them, then `small_roots` on `f(x) = (x·2^k + known)^e − c`. Signal: "send seed / a / c" for an LCG feeding RSA.
 
+## Recognition → move (hard crypto)
+
+- Nonces from a linear generator (LCG/affine) → related-nonce lattice; only biased bits → HNP ([lattice-and-lwe.md](lattice-and-lwe.md)).
+- Secret sharing with fewer shares than the degree → CVP over the lattice of linear relations.
+- Parity/LSB oracle that rounds or is noisy → lattice cleanup instead of exact binary search.
+- Same message under several RSA keys with small `e` → Hastad (check whether a PRNG picks `e`).
+- `Math.random()` (V8) → xorshift128+ state from ~5 doubles via z3/GF(2) — see [prng.md](prng.md).
+- CSIDH/isogeny with extra leaks (degrees, orders) → CRT + Pohlig-Hellman on small factors.
+- Mixed modes (OFB + GCM, CBC + MAC) → look for keystream/nonce reuse across the two modes.
+- Tooling: most hard crypto needs Sage + fpylll (LLL/BKZ/CVP); without Sage use `fpylll` + `sympy`, and `flatter` as the reducer (see 2026 refresh below).
+
 ## Detailed Sections
 
 Technique-by-technique notes (the long tail) live in [details.md](details.md). Read it, or grep it for your keyword, once the quick start and the topic files above have not settled the challenge.
