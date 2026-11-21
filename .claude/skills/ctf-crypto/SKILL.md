@@ -110,7 +110,7 @@ python3 -c "from sympy import factorint; print(factorint(<n>))"
 - Secret sharing with fewer shares than the degree → CVP over the lattice of linear relations.
 - Parity/LSB oracle that rounds or is noisy → lattice cleanup instead of exact binary search.
 - Same message under several RSA keys with small `e` → Hastad (check whether a PRNG picks `e`).
-- `Math.random()` (V8) → xorshift128+ state from ~5 doubles via z3/GF(2) — see [prng.md](prng.md).
+- `Math.random()` (V8) → xorshift128+ state from ~3 consecutive doubles via z3/GF(2) (use more if samples aren't consecutive) — see [prng.md](prng.md).
 - CSIDH/isogeny with extra leaks (degrees, orders) → CRT + Pohlig-Hellman on small factors.
 - Mixed modes (OFB + GCM, CBC + MAC) → look for keystream/nonce reuse across the two modes.
 - Tooling: most hard crypto needs Sage + fpylll (LLL/BKZ/CVP); without Sage use `fpylll` + `sympy`, and `flatter` as the reducer (see 2026 refresh below).

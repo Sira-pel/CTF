@@ -4,9 +4,11 @@ One-page summary of the two studies in this folder. Detailed per-challenge data:
 [hard100-report.md](hard100-report.md) (100 challenges, 2021–2026) ·
 [hard28-report.md](hard28-report.md) (28 challenges, 2022–2024) ·
 [hard100-challenges.csv](hard100-challenges.csv) (per-challenge trick/tools/signal/coverage) ·
-[SOURCES.md](SOURCES.md) (every writeup link from both studies).
+[SOURCES.md](SOURCES.md) (every writeup link from both studies, with a Difficulty column).
 
-These are reference material, not skill content: open them on demand. Writeup lookups are for **after** an event (project rules ban writeup lookup mid-event).
+**Not uniformly hard:** of the 128, roughly **55–70 are truly hard**; ~40–55 are medium or easier, and ≥5 easy/beginner rows slipped into the "hard-100" set (ctf42's Hard label is a heuristic — e.g. SECCON babycmp: labelled Hard, actually a 176-solve XOR warmup). Prefer solve counts / author notes when picking practice targets.
+
+These are reference material, not skill content: open them on demand. Writeup lookup is allowed per project rules.
 
 ## Tools by category (count of the 100 hard challenges whose solve used them)
 
@@ -21,14 +23,16 @@ These are reference material, not skill content: open them on demand. Writeup lo
 
 Across all 100: gdb 31, Python 25, Ghidra 19, pwntools 19, Burp 15, browser 12, QEMU 11, Sage 7, z3 5, fpylll 4, Wireshark 4.
 
-## Techniques per category (count in the 100)
+## Techniques per category (count in the 100; hand-bucketed from CSV tags — see [hard100-challenges.csv](hard100-challenges.csv))
 
-- **pwn (30):** kernel incl. eBPF/race/cross-cache 9, VM/emulator escape or interpreter pwn 7, browser engine 3, glibc heap 5, non-glibc runtimes (Rust, Lua, musl, OCaml, Nim) 7.
-- **rev (24):** custom VM 9, exotic architecture 6, driver/kernel-module 3, "logic elsewhere" (shader/media/DWARF) 5.
-- **web (15):** XSS/CSP/client-side chains 6, parser/smuggling/type confusion 6, deserialization 2.
-- **crypto (12):** lattices (CVP/HNP/LLL) 5, PRNG prediction 3, oracle attacks 3, isogeny 1.
-- **forensics (8):** Windows artifacts 3, network decrypt 3.
+- **pwn (30):** kernel incl. eBPF/race/cross-cache 9, VM/emulator escape or interpreter pwn ~5, browser engine 3, glibc heap ~5–8 (definition-dependent), non-glibc runtimes (Rust, Lua, musl, OCaml, Nim) ~4.
+- **rev (24):** custom VM ~8, exotic architecture ~5, driver/kernel-module 3, "logic elsewhere" (shader/media/DWARF) 5.
+- **web (15):** XSS/CSP/client-side chains ~5, parser/smuggling/type confusion 6, deserialization 2.
+- **crypto (12):** lattices (CVP/HNP/LLL) 5, PRNG prediction ~5, oracle attacks 3, isogeny 1.
+- **forensics (8):** Windows artifacts ~4, network decrypt 3.
 - **misc/AI (11):** pickle/jail 5, LLM 5.
+
+Pack coverage across the 100 (CSV-derived): **covered 16 / partial 64 / gap 20**.
 
 ## Recurring recognition signals → technique
 
@@ -39,7 +43,7 @@ Across all 100: gdb 31, Python 25, Ghidra 19, pwntools 19, Burp 15, browser 12, 
 | `qemu-system` with custom `-device` | Device MMIO bug → host escape (reverse the QEMU binary) |
 | `d8` + `.diff` | V8 addrOf/fakeObj; 2024+ also needs a sandbox escape |
 | Bytecode blob + dispatch loop + `nc` | Custom VM: disassemble, then OOB into interpreter state |
-| CET/IBT enabled (`endbr64` everywhere) | SROP / sigreturn, JOP |
+| CET/IBT enabled (`endbr64` everywhere) | endbr64-gated ROP/JOP; check the CET flavor (software endbr check ≠ shadow stack; SROP only sometimes applies) |
 | glibc ≥ 2.32 heap | safe-linking: leak heap, `(pos>>12)^ptr`; ≥ 2.34 no hooks → TLS dtors / FSOP |
 | Links musl / is Rust / Lua / OCaml | Allocator- or runtime-specific: unchecked index, tag confusion, fake objects |
 | Odd `e_machine` / ROM file | Emulator + Ghidra processor first |
@@ -52,7 +56,7 @@ Across all 100: gdb 31, Python 25, Ghidra 19, pwntools 19, Burp 15, browser 12, 
 | Shamir/LWE with too few equations | CVP / embedding |
 | `Math.random` / Python `random` | Predict state (z3 xorshift128+, MT19937 untemper) |
 | `.evtx`, SAM/SYSTEM, Groups.xml | chainsaw/evtx_dump, secretsdump, gpp-decrypt |
-| Encrypted pcap + any keys/dump | SSLKEYLOG → tshark |
+| Encrypted pcap + provided/recovered keys or dump | SSLKEYLOG → tshark |
 | `addaudithook`, code objects, pickle scanner | Jail via parser differential / CodeType / memo |
 | LLM with secret | Prompt leak in another language/format; boundary spoof; tool abuse |
 
@@ -88,45 +92,47 @@ Priority if time is short: qemu-system-x86, patchelf, ROPgadget, one_gadget, sec
 
 ## Practice queue
 
-### hard-100 pass — 15 with public files, easiest first (RE/Pwn heavy)
+### hard-100 pass — 14 with public files, easiest first (RE/Pwn heavy)
 
-| # | Challenge | Why | Files |
-|---|---|---|---|
-| 1 | SECCON 2022 babycmp (rev) | Let angr do the work; learn the angr template | github.com/SECCON/SECCON2022_online_CTF |
-| 2 | UIUCTF 2022 odd_shell (pwn) | Restricted-byte shellcode | github.com/sigpwny/UIUCTF-2022-Public |
-| 3 | SECCON 2023 jumpout (rev) | Jump-table obfuscation + xor | github.com/SECCON/SECCON2023_online_CTF |
-| 4 | SECCON 2021 kasu_bof (pwn) | ret2dlresolve with no leak | github.com/SECCON/SECCON2021_online_CTF |
-| 5 | SECCON 2022 eguite (rev) | Rust reversing + z3 | SECCON2022_online_CTF |
-| 6 | SECCON 2023 xuyao (rev) | Custom block cipher → z3 | SECCON2023_online_CTF |
-| 7 | DiceCTF 2024 baby-talk (pwn) | Off-by-null → House of Einherjar → tcache | github.com/dicegang/dicectf-quals-2024-challenges |
-| 8 | PlaidCTF 2021 Plaidflix (pwn) | UAF + safe-linking | github.com/sajjadium/ctf-archives/tree/main/ctfs/PlaidCTF/2021/pwn/Plaidflix |
-| 9 | SECCON 2023 selfcet (pwn) | CET bypass with SROP | SECCON2023_online_CTF |
-| 10 | corCTF 2021 vmquack (rev) | Write your first full VM disassembler | github.com/Crusaders-of-Rust/corCTF-2021-public-challenge-archive |
-| 11 | 0CTF 2022 ezvm (pwn) | Same VM skill turned into an exploit | github.com/sajjadium/ctf-archives/tree/main/ctfs/0CTF/2022/pwn/ezvm |
-| 12 | SECCON 2023 DataStore1 (pwn) | Heap type confusion + feng shui | SECCON2023_online_CTF |
-| 13 | TSG 2021 lkgit (pwn) | First kernel race (userfaultfd) | github.com/tsg-ut/tsgctf2021 |
-| 14 | HITCON 2022 kernel / Wall Rose 2023 (pwn) | UAF → modprobe_path; cross-cache | perfectblue writeup + HITCON repos |
-| 15 | SECCON 2022 babypf (pwn) | eBPF verifier bug (stretch goal) | SECCON2022_online_CTF |
+*(SECCON 2022 babycmp was dropped: it's an easy XOR warmup — "Welcome to SECCON 2022", ~176 solves — not a hard angr challenge; ctf42's Hard label is wrong there. Optional angr demo at most.)*
+
+| # | Challenge | Diff (evidence) | Why | Files |
+|---|---|---|---|---|
+| 1 | UIUCTF 2022 odd_shell (pwn) | medium | Restricted-byte shellcode | github.com/sigpwny/UIUCTF-2022-Public |
+| 2 | SECCON 2023 jumpout (rev) | easy–med (~154 solves) | Jump-table obfuscation + xor | github.com/SECCON/SECCON2023_online_CTF |
+| 3 | SECCON 2021 kasu_bof (pwn) | medium | ret2dlresolve with no leak | github.com/SECCON/SECCON2021_online_CTF |
+| 4 | SECCON 2022 eguite (rev) | easy (author: relatively easy Rust rev) | Rust reversing + constraint cleanup | SECCON2022_online_CTF |
+| 5 | SECCON 2023 xuyao (rev) | medium | Pointer-struct obfuscation; clean decomp then invert xor chain (no z3) | SECCON2023_online_CTF |
+| 6 | DiceCTF 2024 baby-talk (pwn) | hard | Off-by-null → House of Einherjar → tcache | github.com/dicegang/dicectf-quals-2024-challenges |
+| 7 | PlaidCTF 2021 Plaidflix (pwn) | hard/insane | UAF + safe-linking | github.com/sajjadium/ctf-archives/tree/main/ctfs/PlaidCTF/2021/pwn/Plaidflix |
+| 8 | SECCON 2023 selfcet (pwn) | hard | Software CET (`endbr64` gate): partial overwrite + constrained ROP (not SROP) | SECCON2023_online_CTF |
+| 9 | corCTF 2021 vmquack (rev) | unverified | Write your first full VM disassembler | github.com/Crusaders-of-Rust/corCTF-2021-public-challenge-archive |
+| 10 | 0CTF 2022 ezvm (pwn) | unverified | Same VM skill turned into an exploit | github.com/sajjadium/ctf-archives/tree/main/ctfs/0CTF/2022/pwn/ezvm |
+| 11 | SECCON 2023 DataStore1 (pwn) | hard | Heap type confusion + feng shui | SECCON2023_online_CTF |
+| 12 | TSG 2021 lkgit (pwn) | hard (unverified) | First kernel race (userfaultfd) | github.com/tsg-ut/tsgctf2021 |
+| 13 | HITCON 2022 kernel / Wall Rose 2023 (pwn) | hard | UAF → modprobe_path; cross-cache | perfectblue writeup + HITCON repos |
+| 14 | SECCON 2022 babypf (pwn) | hard/insane | eBPF verifier bug (stretch goal) | SECCON2022_online_CTF |
 
 ### hard-28 pass — 10 from public archives, beginner → harder (RE/Pwn order)
 
-| # | Challenge | Why | Files |
-|---|---|---|---|
-| 1 | DiceCTF 2023 bop | Stack overflow + seccomp ORW | github.com/dicegang/dicectf-2023-challenges/tree/main/pwn/bop |
-| 2 | Google CTF 2023 write-flag-where | `/proc/self/mem` write of flag | google-ctf 2023 quals (writeup: cryptocat.me blog) |
-| 3 | UIUCTF 2023 vmwhere1 | Small VM | github.com/sigpwny/UIUCTF-2023-Public |
-| 4 | corCTF 2022 simplewaf | Node URL object | github.com/Crusaders-of-Rust/corCTF-2022-public-challenge-archive/tree/master/web/simplewaf |
-| 5 | SECCON 2022 skipinx | qs limit | github.com/arkark/my-ctf-challenges (web/skipinx) |
-| 6 | Google CTF 2023 UNDER-CONSTRUCTION | HPP | github.com/google/google-ctf (2023 quals web) |
-| 7 | Google CTF 2022 Treebox | AST jail | google-ctf 2022 |
-| 8 | SECCON 2022 babyfile | FSOP/obstack | github.com/ret2school/ctf/tree/master/2022/seccon/pwn/babyfile |
-| 9 | HITCON 2023 LessEQualmore | SUBLEQ RE | github.com/bronson113/My_CTF_Challenges |
-| 10 | Google CTF 2022 eldar | Reloc VM (stretch) | google-ctf 2022 + Midās writeup |
+| # | Challenge | Diff (report label) | Why | Files |
+|---|---|---|---|---|
+| 1 | DiceCTF 2023 bop | medium | Stack overflow + seccomp ORW (raw syscalls) | github.com/dicegang/dicectf-2023-challenges/tree/main/pwn/bop |
+| 2 | Google CTF 2023 write-flag-where | medium | `/proc/self/mem` write of flag | google-ctf 2023 quals (writeup: cryptocat.me blog) |
+| 3 | UIUCTF 2023 vmwhere1 | medium | Small VM | github.com/sigpwny/UIUCTF-2023-Public |
+| 4 | corCTF 2022 simplewaf | medium | Node URL object | github.com/Crusaders-of-Rust/corCTF-2022-public-challenge-archive/tree/master/web/simplewaf |
+| 5 | SECCON 2022 skipinx | easy–med | qs limit | github.com/arkark/my-ctf-challenges (web/skipinx) |
+| 6 | Google CTF 2023 UNDER-CONSTRUCTION | medium | HPP | github.com/google/google-ctf (2023 quals web) |
+| 7 | Google CTF 2022 Treebox | medium | AST jail | google-ctf 2022 |
+| 8 | SECCON 2022 babyfile | hard | FSOP/obstack | github.com/ret2school/ctf/tree/master/2022/seccon/pwn/babyfile |
+| 9 | HITCON 2023 LessEQualmore | med–hard | SUBLEQ RE | github.com/bronson113/My_CTF_Challenges |
+| 10 | Google CTF 2022 eldar | hard | Reloc VM (stretch) | google-ctf 2022 + Midās writeup |
 
 Always-on: [pwn.college](https://pwn.college/program-security/) Program Security hard ROP / RE modules.
 
 ## Caveats
 
 - Tool counts come from tools each writeup uses; always-present tools (pwntools in pwn) are undercounted.
-- CTFtime/ctf42 tags are community-entered and sparse — read trends as direction only.
+- CTFtime/ctf42 tags are community-entered and sparse — read trends as direction only. ctf42's Hard/Insane label is a heuristic (solve-rank + agent + event weight) and mislabeled warmups (babycmp); prefer solve counts / author tags.
 - "Covered" in the CSV means the skills have a usable path; "Partial" = mentioned, no quick recipe; "Gap" = missing.
+- Technique counts above are hand-bucketed from CSV tags; recount from [hard100-challenges.csv](hard100-challenges.csv) if precision matters.

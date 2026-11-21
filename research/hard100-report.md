@@ -1,6 +1,6 @@
 # Hard-100 CTF study — report (21 Nov 2026)
 
-**Scope:** 100 hard/medium-hard challenges from 2021–2026 (pwn 30, rev 24, web 15, crypto 12, forensics 8, misc/jail 6, AI/LLM 5). No overlap with the earlier 28-challenge study.
+**Scope:** 100 challenges rated Hard/Insane by ctf42 (a heuristic — see Caveats; roughly 55–70 of the combined 128 are truly hard) from 2021–2026 (pwn 30, rev 24, web 15, crypto 12, forensics 8, misc/jail 6, AI/LLM 5). No overlap with the earlier 28-challenge study.
 **Sources:** HITCON, SECCON, Google CTF, DiceCTF, PlaidCTF, 0CTF, corCTF, hxp, TSG, DEF CON Quals, UIUCTF, ImaginaryCTF, DownUnderCTF, SekaiCTF, plus HTB Global Benchmark (AI).
 **Picking method:** I started from the ctf42.online index, which aggregates CTFtime. It has 1,754 challenges from 74 top events, and 734 of them have writeups. I took the ones rated Hard or Insane (plus a few strong Medium web and forensics ones) and checked each against the pack on the PR #3 branch.
 **Links:** All 62 non-CTFtime links returned HTTP 200. All 38 CTFtime links loaded with a browser user-agent, and their titles match the challenges. Full list: `SOURCES.md`.
@@ -19,7 +19,7 @@
 Across all 100: gdb 31, Python 25, Ghidra 19, pwntools 19, Burp 15, browser 12, **QEMU 11**, Sage 7, z3 5, fpylll 4, Wireshark 4.
 
 ## 2. Technique frequency and trends
-**In our 100:** kernel (incl. eBPF/race/cross-cache) 9, VM/emulator escape or interpreter pwn 7, browser engine 3, glibc heap (tcache/safe-linking/FSOP/TLS dtors) 5, non-glibc runtimes (Rust, Lua, musl, OCaml, Nim) 7, custom VM rev 9, exotic architecture 6, driver/kernel-module rev 3, shader/media/DWARF "logic elsewhere" 5, XSS/CSP/client-side chains 6, parser/smuggling/type confusion 6, deserialization 2, lattices (CVP/HNP/LLL) 5, PRNG prediction 3, oracle attacks 3, isogeny 1, Windows artifacts 3, network decrypt 3, pickle/jail 5, LLM 5.
+**In our 100** (hand-bucketed from CSV tags; see `challenges.csv`): kernel (incl. eBPF/race/cross-cache) 9, VM/emulator escape or interpreter pwn ~5, browser engine 3, glibc heap (tcache/safe-linking/FSOP/TLS dtors) ~5–8, non-glibc runtimes (Rust, Lua, musl, OCaml, Nim) ~4, custom VM rev ~8, exotic architecture ~5, driver/kernel-module rev 3, shader/media/DWARF "logic elsewhere" 5, XSS/CSP/client-side chains ~5, parser/smuggling/type confusion 6, deserialization 2, lattices (CVP/HNP/LLL) 5, PRNG prediction ~5, oracle attacks 3, isogeny 1, Windows artifacts ~4, network decrypt 3, pickle/jail 5, LLM 5.
 
 **Across the 734 tagged writeups (CTFtime-derived tags; counts are by period 2021–22 / 2023–24 / 2025–26):**
 - **pwn:** rop 8/7/1, UAF 7/7/2, heap 4/5/1, shellcode 6/2/0, kernel 2/0/1. Classic glibc heap keeps fading, and VM escape went from 2 to 3. Most of the hard points now come from kernel, VM escape, and V8.
@@ -37,7 +37,7 @@ Across all 100: gdb 31, Python 25, Ghidra 19, pwntools 19, Burp 15, browser 12, 
 | `qemu-system` with custom `-device` | Device MMIO bug → host escape (reverse the QEMU binary) |
 | `d8` + `.diff` | V8 addrOf/fakeObj; 2024+ also needs a sandbox escape |
 | Bytecode blob + dispatch loop + `nc` | Custom VM: disassemble, then OOB into interpreter state |
-| CET/IBT enabled (`endbr64` everywhere) | SROP / sigreturn, JOP |
+| CET/IBT enabled (`endbr64` everywhere) | endbr64-gated ROP/JOP; check the CET flavor (software endbr check ≠ shadow stack; SROP only sometimes applies) |
 | glibc ≥ 2.32 heap | safe-linking: leak heap, `(pos>>12)^ptr`; ≥2.34 no hooks → TLS dtors / FSOP |
 | Links musl / is Rust / Lua / OCaml | Allocator- or runtime-specific: unchecked index, tag confusion, fake objects |
 | Odd `e_machine` / ROM file | Emulator + Ghidra processor first |
@@ -50,12 +50,12 @@ Across all 100: gdb 31, Python 25, Ghidra 19, pwntools 19, Burp 15, browser 12, 
 | Shamir/LWE with too few equations | CVP / embedding |
 | `Math.random` / Python `random` | Predict state (z3 xorshift128+, MT19937 untemper) |
 | `.evtx`, SAM/SYSTEM, Groups.xml | chainsaw/evtx_dump, secretsdump, gpp-decrypt |
-| Encrypted pcap + any keys/dump | SSLKEYLOG → tshark |
+| Encrypted pcap + provided/recovered keys or dump | SSLKEYLOG → tshark |
 | `addaudithook`, code objects, pickle scanner | Jail via parser differential / CodeType / memo |
 | LLM with secret | Prompt leak in another language/format; boundary spoof; tool abuse |
 
 ## 4. Gaps in the pack (PR #3 branch), ranked by impact for Pel
-Coverage across the 100: **Covered 16, Partial 63, Gap 21.** The pack is broad, so most misses are "mentioned but no quick path."
+Coverage across the 100: **Covered 16, Partial 64, Gap 20** (CSV-derived). The pack is broad, so most misses are "mentioned but no quick path."
 1. **Kernel + QEMU quick path in pwn (high).** Kernel material exists (`kernel*.md`), but there is no 5-line "unpack → debug → primitive ladder" entry, and **QEMU device escape is missing** (0 hits). Kernel challenges are the most common hard pwn.
 2. **Browser/V8 exploitation (high for hard events, low for Pel now).** There's no addrOf/fakeObj path, no V8 sandbox (0 hits), and no SpiderMonkey (0 hits).
 3. **Exotic-arch and "logic elsewhere" RE (high for RE).** DWARF VM (0 hits), DVD VM (0 hits), TILE-Gx, and Markov machines are missing. Shaders and printf-VMs are only partly covered.
@@ -87,26 +87,29 @@ pipx install name-that-hash
 ```
 **Priority if time is short:** qemu-system-x86, patchelf, ROPgadget, one_gadget, seccomp-tools, and libc-database for RE/Pwn. After that, Sage (docker) and fpylll, then tshark and hashcat.
 
-## 7. Practice queue: 15 challenges with public files, easiest first (RE/Pwn heavy)
-| # | Challenge | Why | Files |
-|---|---|---|---|
-| 1 | SECCON 2022 babycmp (rev) | Let angr do the work; learn the angr template | github.com/SECCON/SECCON2022_online_CTF |
-| 2 | UIUCTF 2022 odd_shell (pwn) | Restricted-byte shellcode | github.com/sigpwny/UIUCTF-2022-Public |
-| 3 | SECCON 2023 jumpout (rev) | Jump-table obfuscation + xor | github.com/SECCON/SECCON2023_online_CTF |
-| 4 | SECCON 2021 kasu_bof (pwn) | ret2dlresolve with no leak | github.com/SECCON/SECCON2021_online_CTF |
-| 5 | SECCON 2022 eguite (rev) | Rust reversing + z3 | SECCON2022_online_CTF |
-| 6 | SECCON 2023 xuyao (rev) | Custom block cipher → z3 | SECCON2023_online_CTF |
-| 7 | DiceCTF 2024 baby-talk (pwn) | Off-by-null → House of Einherjar → tcache | github.com/dicegang/dicectf-quals-2024-challenges |
-| 8 | PlaidCTF 2021 Plaidflix (pwn) | UAF + safe-linking | github.com/sajjadium/ctf-archives/tree/main/ctfs/PlaidCTF/2021/pwn/Plaidflix |
-| 9 | SECCON 2023 selfcet (pwn) | CET bypass with SROP | SECCON2023_online_CTF |
-| 10 | corCTF 2021 vmquack (rev) | Write your first full VM disassembler | github.com/Crusaders-of-Rust/corCTF-2021-public-challenge-archive |
-| 11 | 0CTF 2022 ezvm (pwn) | Same VM skill turned into an exploit | github.com/sajjadium/ctf-archives/tree/main/ctfs/0CTF/2022/pwn/ezvm |
-| 12 | SECCON 2023 DataStore1 (pwn) | Heap type confusion + feng shui | SECCON2023_online_CTF |
-| 13 | TSG 2021 lkgit (pwn) | First kernel race (userfaultfd) | github.com/tsg-ut/tsgctf2021 |
-| 14 | HITCON 2022 kernel / Wall Rose 2023 (pwn) | UAF → modprobe_path; cross-cache | perfectblue writeup + HITCON repos |
-| 15 | SECCON 2022 babypf (pwn) | eBPF verifier bug (stretch goal) | SECCON2022_online_CTF |
+## 7. Practice queue: 14 challenges with public files, easiest first (RE/Pwn heavy)
+
+*(babycmp dropped: easy XOR warmup, ~176 solves — ctf42 Hard label wrong; optional angr demo at most.)*
+
+| # | Challenge | Diff (evidence) | Why | Files |
+|---|---|---|---|---|
+| 1 | UIUCTF 2022 odd_shell (pwn) | medium | Restricted-byte shellcode | github.com/sigpwny/UIUCTF-2022-Public |
+| 2 | SECCON 2023 jumpout (rev) | easy–med (~154 solves) | Jump-table obfuscation + xor | github.com/SECCON/SECCON2023_online_CTF |
+| 3 | SECCON 2021 kasu_bof (pwn) | medium | ret2dlresolve with no leak | github.com/SECCON/SECCON2021_online_CTF |
+| 4 | SECCON 2022 eguite (rev) | easy (author: relatively easy Rust rev) | Rust reversing + constraint cleanup | SECCON2022_online_CTF |
+| 5 | SECCON 2023 xuyao (rev) | medium | Pointer-struct obfuscation; clean decomp then invert xor chain (no z3) | SECCON2023_online_CTF |
+| 6 | DiceCTF 2024 baby-talk (pwn) | hard | Off-by-null → House of Einherjar → tcache | github.com/dicegang/dicectf-quals-2024-challenges |
+| 7 | PlaidCTF 2021 Plaidflix (pwn) | hard/insane | UAF + safe-linking | github.com/sajjadium/ctf-archives/tree/main/ctfs/PlaidCTF/2021/pwn/Plaidflix |
+| 8 | SECCON 2023 selfcet (pwn) | hard | Software CET (`endbr64` gate): partial overwrite + constrained ROP (not SROP) | SECCON2023_online_CTF |
+| 9 | corCTF 2021 vmquack (rev) | unverified | Write your first full VM disassembler | github.com/Crusaders-of-Rust/corCTF-2021-public-challenge-archive |
+| 10 | 0CTF 2022 ezvm (pwn) | unverified | Same VM skill turned into an exploit | github.com/sajjadium/ctf-archives/tree/main/ctfs/0CTF/2022/pwn/ezvm |
+| 11 | SECCON 2023 DataStore1 (pwn) | hard | Heap type confusion + feng shui | SECCON2023_online_CTF |
+| 12 | TSG 2021 lkgit (pwn) | hard (unverified) | First kernel race (userfaultfd) | github.com/tsg-ut/tsgctf2021 |
+| 13 | HITCON 2022 kernel / Wall Rose 2023 (pwn) | hard | UAF → modprobe_path; cross-cache | perfectblue writeup + HITCON repos |
+| 14 | SECCON 2022 babypf (pwn) | hard/insane | eBPF verifier bug (stretch goal) | SECCON2022_online_CTF |
 
 ## Caveats
+- The ctf42 Hard/Insane label is a heuristic (solve-rank + organizer label + agent judgment + event weight), not ground truth — it mislabeled SECCON babycmp as Hard (actually a 176-solve XOR warmup). Of the combined 128, roughly 55–70 are truly hard; ≥5 easy/beginner rows slipped into this set. Prefer solve counts / author tags when practicing.
 - The tool counts come from the tools each writeup or solve uses. They undercount tools that are always present, like pwntools in pwn.
 - The CTFtime/ctf42 tags are community-entered and sparse, so read the trends as direction only.
 - "Covered" means the PR #3 branch has a usable path for the technique. "Partial" means it's mentioned but there's no quick recipe.

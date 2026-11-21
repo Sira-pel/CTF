@@ -24,5 +24,6 @@ Open on demand for hard pwn targets. Companion to [kernel.md](kernel.md) (deep k
 
 ## Modern mitigations
 
-- CET/IBT/shadow stack: normal ROP dies on `ret`; use SROP (sigreturn) or JOP into `endbr64` targets.
+- CET/IBT: returns/indirect branches may require `endbr64` landing pads — build ROP/JOP only to such targets.
+- Shadow stack (if present) further constrains returns; SROP/sigreturn is one *possible* bypass, not the default for every "CET" challenge (SECCON selfcet: software `endbr64` check + partial overwrite + constrained ROP, no SROP).
 - glibc ≥ 2.32 safe-linking and the no-hooks (≥ 2.34) FSOP/exit_funcs path: see the SKILL.md decision tree and Field lessons.

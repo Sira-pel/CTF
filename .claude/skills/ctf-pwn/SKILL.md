@@ -113,7 +113,7 @@ python3 -c "from pwn import *; print(cyclic_find(0x61616168))"
 
 # libc identification — libc-database is optional (git clone https://github.com/niklasb/libc-database):
 ./libc-database/find puts <leaked_addr_last_3_nibbles>
-# libc.rip also identifies libcs but uploads your offsets to a third party — ASK FIRST
+# libc.rip also identifies libcs (third-party upload — fine per project rules)
 ```
 
 ## Source Code Red Flags
@@ -148,7 +148,7 @@ bash -c '{ echo "cmd1"; echo "cmd2"; sleep 1; } | nc host port'
 - Partial RELRO + No PIE -> GOT overwrite (easiest, use fixed addresses)
 - Full RELRO -> FSOP / House of Apple 2 / `_IO_obstack_jumps`, `exit_funcs`, or return addresses. `__free_hook`/`__malloc_hook` were REMOVED in glibc 2.34+ — only consider them on a confirmed old libc
 - Modern-libc order: leak → FSOP (`_IO_obstack_jumps`/`_IO_wfile_jumps`, house-of-*) → `exit_funcs`/`__call_tls_dtors` → stack ROP/ORW
-- `run.sh` + `bzImage`/`.ko`, custom QEMU `-device`, or patched `d8` + `.diff` → open [kernel-vm-escape.md](kernel-vm-escape.md); CET/IBT (`endbr64` everywhere) → SROP/JOP, not classic ROP
+- `run.sh` + `bzImage`/`.ko`, custom QEMU `-device`, or patched `d8` + `.diff` → open [kernel-vm-escape.md](kernel-vm-escape.md); CET/IBT (`endbr64` everywhere) → ROP/JOP only to `endbr64`-valid targets (SROP helps only in some setups)
 - Stack canary present -> prefer heap-based attacks or leak canary first
 
 ## Stack Buffer Overflow
@@ -157,7 +157,7 @@ bash -c '{ echo "cmd1"; echo "cmd2"; sleep 1; } | nc host port'
 2. Check protections: `checksec --file=binary`
 3. No PIE + No canary = direct ROP
 4. Canary leak via format string or partial overwrite
-5. Canary byte-by-byte on forking servers (7*256 attempts max) is ONLINE brute force — ASK FIRST, not during an event without approval
+5. Canary byte-by-byte on forking servers (7*256 attempts max) is online brute force — follow the event's rules (ask if unsure)
 
 **ret2win with magic value:** Overflow -> `ret` (alignment) -> `pop rdi; ret` -> magic -> win(). **Stack alignment:** SIGSEGV in `movaps` = add extra `ret` gadget. **Offset:** buffer at `rbp - N`, return at `rbp + 8`, total = N + 8. **Input filtering:** assert payload avoids `memmem()` banned strings. **Gadgets:** `ROPgadget --binary binary | grep "pop rdi"`, or pwntools `ROP()` for hidden gadgets in CMP immediates. See [overflow-basics.md](overflow-basics.md) for full exploit code.
 
@@ -255,7 +255,7 @@ your controlled function without tripping `_IO_validate_vtable` (which only guar
   (gone since 2.34), which is exactly why FSOP replaced them.
 - pwntools has `FileStructure()` to build the fake FILE without counting offsets by hand.
 - See `heap-fsop.md` for the field layout; pick offsets against the *exact* target libc.
-- `_IO_obstack_jumps` variant (babyfile-class): fake FILE so the flush path calls `_IO_obstack_overflow` → controlled `chunkfun(extra_arg)` ≈ `system("/bin/sh")` — useful when the `_IO_wfile_jumps` path is constrained.
+- `_IO_obstack_jumps` variant (babyfile-class): fake FILE so the flush path calls `_IO_obstack_overflow` → controlled `chunkfun(extra_arg)` ≈ `system("/bin/sh")`. It works even where hooks still exist (babyfile was glibc 2.31) — the point is that it's the option when wfile FSOP paths are constrained, not a hooks-era marker.
 - Refs: https://oslike.github.io/2024/12/06/house-of-apple2 ·
   https://hareh4ru.github.io/posts/FSOP-for-libc-2.35-and-over ·
   original: Roderick's House of Apple posts.
@@ -274,8 +274,7 @@ For spillway we read the allowed-syscall set out of the disassembly. Faster: run
 binary under **`seccomp-tools dump ./bin`** to print the BPF filter directly.
 - Default ORW (open/read/write) is the usual escape; `mov rsi,rax` style gadgets to
   thread the opened fd into read, as we did, still apply.
-- libc `open` often resolves to `openat`, which the filter blocks; build ORW with raw
-  `syscall` gadgets (write the filename to BSS first), not libc wrappers.
+- On modern glibc, `open()` is often `openat(AT_FDCWD, …)` — if a filter allows `open` but not `openat`, build ORW with raw `SYS_open`/`syscall` gadgets (write the filename to BSS first), not libc wrappers (DiceCTF bop: raw-syscall ORW under seccomp).
 - If `open`/`openat` are blocked but `openat2` (439) or the 32-bit/x32 ABI is not, use
   those; a filter that doesn't pin the architecture is bypassable via `int 0x80` /
   syscall-number + 0x40000000. Check `seccomp-tools` output for a missing arch check.
@@ -291,7 +290,8 @@ binary under **`seccomp-tools dump ./bin`** to print the BPF filter directly.
 ## Field lessons (our solves)
 
 - **Fixed-buffer write primitive (write-flag-where-class).** When the program writes a fixed buffer (the flag) to an address you choose: parse `/proc/self/maps` + PIE base, then overwrite a *later-printed* `.data` string (GOT/exit path on harder variants).
-- **Non-glibc heaps.** Rust `Vec`/Wine heaps: overflow into adjacent length/capacity/ptr fields → AAW, then pivot to stack ROP. Don't force tcache narratives onto them.
+- **Non-glibc heaps.** Wine/Rust allocator heaps (PlaidCTF baby heap?, corCTF Cache of Castaways): overflow into adjacent length/capacity/ptr fields → AAW, then pivot to stack ROP. Don't force tcache narratives onto them.
+- **OOB into pointer tables.** An out-of-bounds index into a function/pointer table is its own primitive (DiceCTF 2026 message_store: OOB color index → fnptr, then stack overflow + sigreturn) — don't generalize allocator narratives onto it.
 - **Bad bytes inside addresses.** `gets()`/`scanf` stop at `0x0a` (and `strcpy` at `0x00`), including inside a little-endian address. Pick gadgets whose address bytes avoid the terminator in every position.
 - **cdecl argument cleanup in hand-built ROP chains.** A fake call to a one-argument function leaves the argument on the stack; follow it with a throwaway `pop reg; ret` so later gadgets are not misaligned.
 - **Safe-linking (glibc 2.32+).** `tcache`/fastbin `fd` is `(addr >> 12) ^ ptr`, so you need a heap leak to forge it. Overwriting `tcache_perthread_struct` avoids the mangling. Since glibc 2.34 the tcache double-free `key` is a random per-process value instead of the tcache pointer, so a UAF no longer leaks that address through it. The key is only a heuristic (the bin is still walked), and `tcache_get()` has no key check, so tcache poisoning still works. Confirm against the source of the libc you are given.

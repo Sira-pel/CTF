@@ -16,7 +16,7 @@ Goal: solve the challenge and find the flag.
 
 Tools are installed manually as needed; each category skill lists its own prerequisites and checks before installing (see its Tool Availability Policy). Model choice and stop-loss rules: [difficulty-routing.md](difficulty-routing.md).
 
-Deep-dive research (two hard-challenge studies: reports, per-challenge CSV with recognition signals, source links) lives in `research/` at the repo root — start at `research/README.md` if you open it. On-demand reference only, don't auto-load it. Writeup links there are for after an event.
+Deep-dive research (two mixed-difficulty-challenge studies: reports, per-challenge CSV with recognition signals, source links) lives in `research/` at the repo root — start at `research/README.md` if you open it. On-demand reference only, don't auto-load it.
 
 ## Hypothesis First (before acting on any finding)
 
@@ -26,7 +26,7 @@ Deep-dive research (two hard-challenge studies: reports, per-challenge CSV with 
 
 Follow the CTF rules in the project's `CLAUDE.md`.
 
-**ASK FIRST — not during an event:** scanners or bulk fuzzing (nmap, sqlmap, ffuf, gobuster, hydra, `ctf-web/scripts/async_fuzz.py`), online brute force (including canary/password brute on live hosts), writeup search (`/ctf-similar-search`, web search for writeups), and third-party services (dogbolt.org, webhook.site, public interactsh). Offline cracking, local analysis, and low-volume requests to official challenge hosts from the laptop's own IP are fine. Never run malware samples on the host.
+**Hard rule:** never attack the CTF platform/scoreboard/infrastructure — or other teams or the venue — to find answers; only interact with challenge targets as intended. Heavy scanning, bulk fuzzing (nmap, sqlmap, ffuf, gobuster, `ctf-web/scripts/async_fuzz.py`), and online brute force against challenge hosts follow the event's own rules — ask if unsure. Offline cracking and internet use (writeup search, dogbolt.org, webhook.site, libc.rip) are fine. Ask before sudo, installs, or running unknown binaries; never run malware samples on the host.
 
 ## Hard-pattern triage (10s)
 

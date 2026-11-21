@@ -502,7 +502,7 @@ for func in bv.functions:
 
 ## Decompiler Comparison with dogbolt.org
 
-> **ASK FIRST:** dogbolt.org is a third-party service — uploading a challenge binary sends it off-machine. Prefer local cross-comparison (Ghidra + r2/IDA). Use dogbolt only with the user's explicit approval, never mid-event.
+> **Note:** dogbolt.org is a third-party service — uploading a challenge binary sends it off-machine. Allowed per project rules; local cross-comparison (Ghidra + r2/IDA) works offline if you prefer.
 
 **dogbolt.org** runs multiple decompilers simultaneously on the same binary and shows results side-by-side.
 
