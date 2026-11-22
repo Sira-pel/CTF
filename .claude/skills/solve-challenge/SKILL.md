@@ -89,7 +89,7 @@ If a URL is given, check for CTFd (`curl -s "$CTF_URL/api/v1/" | head -5`). If C
 
 Re-check the category, try a second category skill (many challenges span two), look for hidden files, alternate ports, headers, source comments and metadata, and check for a simpler path (default creds, known CVE, logic bug). Also check edge cases: off-by-one, races, overflow, encoding mismatches.
 
-If still stuck or low on tokens/budget: invoke `/ctf-handoff` to write `notes/<challenge>-handoff.md` so a teammate (human or their own agent) can resume without redoing work.
+If still stuck or low on tokens/budget: invoke `/team-handoff` to write `notes/<challenge>-handoff.md` so a teammate (human or their own agent) can resume without redoing work.
 
 Process lessons from our past solves (time-boxing, decoy flags, validating tools, remote-service handling): [lessons.md](lessons.md).
 

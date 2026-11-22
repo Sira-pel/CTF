@@ -1,5 +1,5 @@
 ---
-name: ctf-handoff
+name: team-handoff
 description: Writes a continuation handoff for one CTF challenge so a teammate (human or their own AI agent) can resume without redoing work. Use when the user says "hand off", "handoff", "pass to teammate", is stuck on a challenge, or is running out of tokens/budget mid-challenge.
 license: MIT
 compatibility: Requires filesystem-based agent (Claude Code or similar) with bash and Python 3.
