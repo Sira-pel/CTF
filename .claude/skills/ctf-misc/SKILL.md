@@ -92,8 +92,12 @@ python3 -c "__import__('os').system('id')"
 - AST bans `Call`: decorator escape, or `class E(Exception): __getitem__ = os.system` then `raise E` / `except E as e: e["/bin/sh"]` — calls code without `ast.Call`. See [pyjails.md](pyjails.md).
 - Restricted pickle (no REDUCE/INST/OBJ/NEWOBJ): use **BUILD** to rebind `__setstate__`, grabbing callables via GLOBAL from `__main__`/pickle internals — no REDUCE needed. See [pyjails.md](pyjails.md).
 - JSFuck with broken `Array.toString`: rebuild chars via `Number.prototype.toString(radix)`; prefer dynamic `import("fs")` when `require` is gone.
-- Audit-hook sandbox (`sys.addaudithook`): find actions that raise no audit event, or code that runs before/after the hook. Source/AST filter but `exec` of a code object: build `types.CodeType(...)` with your bytecode. Pickle scanner: exploit the parser differential (scanner vs `pickle.loads`) and memo (`PUT`/`GET`) to hide imports; a C++/custom pickle parser is pwn, not misc.
+- Audit-hook sandbox (`sys.addaudithook`): the hook runs in C — pure-Python bypasses fail; you need interpreter memory corruption (a UAF that zeroes the audit-hook list head, e.g. via a vulnerable `__index__` on a core type). Source/AST filter but `exec` of a code object: build `types.CodeType(...)` with your bytecode. Pickle scanner: exploit the parser differential (scanner vs `pickle.loads`) and memo (`PUT`/`GET`) to hide imports; a C++/custom pickle parser is pwn, not misc.
+- Pickle jails with a restricted `setattr`: BUILD writes `__dict__` directly, past the restriction — BUILD/PERSIST bypass setattr hooks, not just missing `__setstate__`.
 - Reading a blocked flag on Linux: `/proc/self/map_files/*`, `/proc/self/mem`, `/proc/self/fd/*`, `/proc/self/syscall` can expose it when `open(flag)` is filtered; tar/zip symlink tricks exploit checker-vs-extractor differentials.
+- Archive polyglots (zip + split 7z): one extractor materializes a symlink, the other follows it to the target file — never extract untrusted archives unsafely on the host.
+- Nested/damaged QR stacks: `zbar` first, then custom ECC repair for the damaged layers.
+- Smart-contract challenges (Solidity) → `/ctf-web` [web3.md](../ctf-web/web3.md); use Foundry for local fork testing.
 
 ## Detailed Sections
 

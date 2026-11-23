@@ -91,6 +91,8 @@ Read the source, hand-craft single requests, hunt parser mismatches — usually 
 - `qs`/Express `parameterLimit=1000`: if a proxy appends `&proxy=nginx`, send ≥1000 params so the append is dropped.
 - Cross-language HPP: Flask `request.form.get` takes the **first** value, PHP `$_POST` the **last** — send `tier=allowed&tier=gold` when middleware forwards the raw body.
 - PHP filter prefix gate: generate a `php://filter` chain that *prepends* the required bytes (e.g. `FREE`), then read the gated resource.
+- Signed exchange (SXG) in play: cache poisoning / authenticity confusion between the signed and fetched origin.
+- "Hidden"/other-user note to recover: XS-Leak oracles — frame counting, error events, cache timing.
 
 ## First-Pass Workflow
 

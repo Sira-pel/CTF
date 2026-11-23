@@ -56,6 +56,9 @@ Follow the CTF rules in the project's `CLAUDE.md`.
 | WebGL/shader source in a "rev" | Logic is in the shader; port GLSL to Python and solve |
 | Rust/Nim/Go binary | Rename runtime noise first; find user `main`, then the comparison |
 | Admin bot + strict CSP | Client-side chain → `/ctf-web` `client-side-chains.md` |
+| QEMU + virtio device source / custom hypervisor | Audit device callbacks and hypercall handlers before the guest heap (`/ctf-pwn` kernel path) |
+| Unusually large `.eh_frame`/`.pdata` vs code size | Unwind/exception tables are the VM — decode them instead of functions |
+| NN/model file used as the flag checker | Extract weights → Z3 bitvectors; don't train (`/ctf-reverse`) |
 
 Event flag: `LMC{...}`. Notes: `notes/<challenge>.md`.
 

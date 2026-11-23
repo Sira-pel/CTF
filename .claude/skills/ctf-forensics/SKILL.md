@@ -98,6 +98,8 @@ See [disk-and-memory.md](disk-and-memory.md) for full Volatility plugin referenc
 - HTTP object carving: `tshark -r cap.pcapng --export-objects http,out/`; unknown app protocol: script it in scapy after Wireshark "Follow stream".
 - Audio: spectrogram first (`sox in.wav -n spectrogram -o s.png`), then FFT bins with numpy.
 - ESP32 firmware: `esptool.py image_info`; app partition is Xtensa → Ghidra Xtensa plugin.
+- SoC/firmware handout: dump the flash, find the filesystem, reverse the RTOS — in that order.
+- Hardware/circuit challenge: read the schematic (KiCad) before touching firmware.
 
 ## Detailed Sections
 

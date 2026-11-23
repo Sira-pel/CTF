@@ -77,7 +77,7 @@ gem install one_gadget seccomp-tools
 - [kernel-techniques.md](kernel-techniques.md) - Kernel exploitation techniques: tty_struct kROP (fake vtable + stack pivot), AAW via ioctl register control, userfaultfd race stabilization, SLUB allocator internals (freelist hardening/obfuscation), leak via kernel panic, MADV_DONTNEED race window extension (DiceCTF 2026), cross-cache CPU-split attack (DiceCTF 2026), PTE overlap file write (DiceCTF 2026), addr_limit bypass via failed file open for kernel memory read/write
 - [kernel-bypass.md](kernel-bypass.md) - Kernel protection bypass: KASLR/FGKASLR bypass (__ksymtab), KPTI bypass (swapgs trampoline, signal handler, modprobe_path/core_pattern via ROP), SMEP/SMAP bypass, GDB kernel module debugging, initramfs/virtio-9p workflow, exploit templates, exploit delivery
 - [field-notes.md](field-notes.md) - Detailed pwn notes: heap exploitation quick reference, additional exploit notes, useful commands
-- [kernel-vm-escape.md](kernel-vm-escape.md) - Hard-target quick recipes (open on demand): kernel pwn unpack→debug→primitive ladder, QEMU custom-device escape, V8/d8 addrOf/fakeObj + sandbox escape, CET/IBT → SROP/JOP
+- [kernel-vm-escape.md](kernel-vm-escape.md) - Hard-target quick recipes (open on demand): kernel pwn unpack→debug→primitive ladder, QEMU device + virtio audits, nested-KVM L2→L1, HDL CPU privilege checks, Windows EPROCESS redirect, ESP32 secure boot, V8/d8 addrOf/fakeObj + sandbox escape, CET/IBT → SROP/JOP
 - [attack-playbook.md](attack-playbook.md) - Linux userland attack playbook: recon of input/privilege boundaries, leak selection by mitigation, and primitive ranking workflow
 - [static-signals.md](static-signals.md) - Exploit-relevant static signals (libc version, seccomp policy, RELRO/PIE/canary/NX evidence) for exploitability assessment
 - [tools-mcp.md](tools-mcp.md) - MCP server integration for pwn: WinDbg MCP session model (`open_cdb_dump`/`open_cdb_remote`/`open_kd_session` + `session_id`), crash-dump triage, in-dump `flag{` memory scanning, live breakpoint/hardware-watchpoint/memory-patch exploitation, `!dh -f` Windows mitigation check (the `checksec` equivalent), kernel-mode token stealing with kd; IDA/Ghidra MCP for exploit development (decompile the vulnerable function first, drop to assembly only for exact gadget bytes)
@@ -150,6 +150,19 @@ bash -c '{ echo "cmd1"; echo "cmd2"; sleep 1; } | nc host port'
 - Modern-libc order: leak → FSOP (`_IO_wfile_jumps`, house-of-*) → `exit_funcs`/`__call_tls_dtors` → stack ROP/ORW
 - `run.sh` + `bzImage`/`.ko`, custom QEMU `-device`, or patched `d8` + `.diff` → open [kernel-vm-escape.md](kernel-vm-escape.md); CET/IBT (`endbr64` everywhere) → ROP/JOP only to `endbr64`-valid targets (SROP helps only in some setups)
 - Stack canary present -> prefer heap-based attacks or leak canary first
+
+## Hard-set recognition lines
+
+- Byte-swap-only primitive → corrupt top-chunk size so `sysmalloc` fenceposts and frees the old top (libc leak without a UAF)
+- Provided/patched libc → read the libc patch first; a patched 2.35 may still allow double-free → tcache_perthread control after a largebin stash (don't assume house-of-X applies)
+- Title hints the intended path is logic, not memory corruption ("it's not a bug") → look for state-machine misuse first; don't force a UAF
+- Custom allocator with a validation rule (e.g., palindrome check) → the check often leaves room for forged headers; use it as the write constraint
+- Game engines / bytecode VMs (Q3-style, save/load, board moves) → learn the bytecode first; move parsers and save/load are overflow hotspots
+- Rust binary → grep for `unsafe`/`transmute` first; safe Rust ≠ whole binary safe
+- Blind/blackout pwn → oracles from crash timing and partial writes (blind ROP)
+- macOS kext: module slide == kernel slide (`kextstat -b` shows the non-slid base); `llvm-objdump` if gdb-multiarch won't load Mach-O
+- Rate-parameterized byte leak + `gets` → leak the canary byte-by-byte (byte 0 is 0x00 — start at 1), then overflow
+- Custom FS (FUSE-style): rename/lookup paths are overflow hotspots; permissions may be checked against a forgeable inode
 
 ## Stack Buffer Overflow
 

@@ -113,6 +113,11 @@ python3 -c "from sympy import factorint; print(factorint(<n>))"
 - `Math.random()` (V8) → xorshift128+ state from ~3 consecutive doubles via z3/GF(2) (use more if samples aren't consecutive) — see [prng.md](prng.md).
 - CSIDH/isogeny with extra leaks (degrees, orders) → CRT + Pohlig-Hellman on small factors.
 - Mixed modes (OFB + GCM, CBC + MAC) → look for keystream/nonce reuse across the two modes.
+- Randomized substitution (secret/random S-box) → model as an LWE-like system and lattice it, don't search the permutation space.
+- Noisy CRC / noisy linear checks → belief propagation or lattice cleanup, not exact binary search.
+- Custom DH group or a "cheap" DLOG oracle → check group-order smoothness first (Pohlig-Hellman before lattices).
+- Rare/legacy block cipher (IDEA-class) → pull the published differential/linear analysis rather than inventing one.
+- Python `hash()` collisions (SipHash/`PYTHONHASHSEED` in play) → force the collision via seed brute / structure, not via breaking SipHash.
 - Tooling: most hard crypto needs Sage + fpylll (LLL/BKZ/CVP); without Sage use `fpylll` + `sympy`, and `flatter` as the reducer (see 2026 refresh below).
 
 ## Detailed Sections

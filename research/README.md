@@ -1,14 +1,15 @@
-# CTF research summaries — both hard-challenge studies
+# CTF research summaries — all three hard-challenge studies
 
-One-page summary of the two studies in this folder. Detailed per-challenge data:
+One-page summary of the three studies in this folder (228 challenges total). Detailed per-challenge data:
 [hard100-report.md](hard100-report.md) (100 challenges, 2021–2026) ·
 [hard28-report.md](hard28-report.md) (28 challenges, 2022–2024) ·
-[hard100-challenges.csv](hard100-challenges.csv) (per-challenge trick/tools/signal/coverage) ·
-[SOURCES.md](SOURCES.md) (every writeup link from both studies, with a Difficulty column).
+[hard200-report.md](hard200-report.md) (100 NEW hard challenges, difficulty-verified: 96/100 strong evidence, recheck 14/15 — [hard200-recheck.md](hard200-recheck.md)) ·
+[hard100-challenges.csv](hard100-challenges.csv) + [hard200-challenges.csv](hard200-challenges.csv) (per-challenge trick/tools/signal/pitfall/takeaway) ·
+[SOURCES.md](SOURCES.md) (every writeup link from all three studies, with difficulty/hardness evidence).
 
-**Not uniformly hard:** of the 128, roughly **55–70 are truly hard**; ~40–55 are medium or easier, and ≥5 easy/beginner rows slipped into the "hard-100" set (ctf42's Hard label is a heuristic — e.g. SECCON babycmp: labelled Hard, actually a 176-solve XOR warmup). Prefer solve counts / author notes when picking practice targets.
+**Mixed difficulty:** of the first 128, roughly **55–70 are truly hard**; ~40–55 are medium or easier, and ≥5 easy/beginner rows slipped into the "hard-100" set (ctf42's Hard label is a heuristic — e.g. SECCON babycmp: labelled Hard, actually a 176-solve XOR warmup). The **hard200** set is difficulty-verified (96/100 strong solve-count/points evidence). Prefer solve counts / author notes when picking practice targets.
 
-These are reference material, not skill content: open them on demand. Writeup lookup is allowed per project rules.
+These are reference material, not skill content: open them on demand. Writeup lookup follows the project rules (past-event writeups fine; current-event lookup needs asking first).
 
 ## Tools by category (count of the 100 hard challenges whose solve used them)
 
@@ -21,7 +22,9 @@ These are reference material, not skill content: open them on demand. Writeup lo
 | forensics (8) | Wireshark 4, tshark 2, python-evtx/chainsaw, impacket-secretsdump, hashcat/john, gpp-decrypt, olevba, sox/numpy |
 | misc/AI (11) | Python 8, pickletools/dis, browser 5 |
 
-Across all 100: gdb 31, Python 25, Ghidra 19, pwntools 19, Burp 15, browser 12, QEMU 11, Sage 7, z3 5, fpylll 4, Wireshark 4.
+Across all 100 (hard100): gdb 31, Python 25, Ghidra 19, pwntools 19, Burp 15, browser 12, QEMU 11, Sage 7, z3 5, fpylll 4, Wireshark 4.
+
+**hard200 study tool frequency:** Ghidra 30, pwntools 25, gdb 17, Python 16, Sage 11, Burp 10, browser 6, QEMU 4, Z3 4, d8 2, binwalk 2, Volatility 2, tshark 2, torch 2, x64dbg 2, Foundry 2; singles include llvm-objdump, Bindiff, syzkaller, Frida, Verilator, esptool, bpftool, rustfilt, Unicorn, FLOSS, KiCad, WinDbg. Notable trends: nested virt (KVM L2→L1, virtio→QEMU, custom hypervisors) dominates hard pwn; V8 moves to Turboshaft IR bugs; Windows-kernel EPROCESS redirects and ESP32 secure-boot tricks at top-tier events; DiffJPEG/Whisper adversarial ML; C-level audit-hook jailbreaks.
 
 ## Techniques per category (count in the 100; hand-bucketed from CSV tags — see [hard100-challenges.csv](hard100-challenges.csv))
 
@@ -86,7 +89,16 @@ pipx install volatility3 && pipx install oletools && pipx install impacket && pi
 sudo gem install zsteg
 # stegseek: .deb from https://github.com/RickdeJager/stegseek/releases
 pipx install name-that-hash
+# hard200 additions
+pip install angr unicorn capstone keystone-engine z3-solver   # RE/emulation
+cargo install rustfilt          # Rust demangling
+pip install torch torchvision DiffJPEG   # adversarial ML (DiffJPEG: or vendor from the challenge)
+# seccomp BPF dump: seccomp-tools (above) or bpftool (apt linux-tools-common)
+# V8: build d8 from the challenge-pinned commit (never a distro d8)
+# Windows kernel/malware: FLARE-VM + WinDbg inside a disposable Windows analysis VM — not a Linux install
 ```
+
+Note: this repo has no `install_ctf_tools.sh` (references were removed as broken; tools are installed manually per the skills' prerequisites). This list is the install reference.
 
 Priority if time is short: qemu-system-x86, patchelf, ROPgadget, one_gadget, seccomp-tools, libc-database (RE/Pwn first), then Sage (docker) + fpylll, then tshark + hashcat.
 

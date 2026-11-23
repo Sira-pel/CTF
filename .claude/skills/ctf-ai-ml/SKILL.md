@@ -115,6 +115,9 @@ print(f'Shape: {img.shape}, Range: [{img.min():.3f}, {img.max():.3f}]')
 - **Prompt leak blocked in English:** ask the same thing in another language, or as a translation/summary task; output filters blocking digits/symbols → spelled-out characters or one char per line, then rebuild.
 - **Binary-classifier LLM (approve/deny):** fake a request boundary (`---END OF REQUEST---`, `SYSTEM:`) or give few-shot examples where your input maps to "granted".
 - **Agent with tools (DB, files, HTTP):** ask it to use the tool on the target — the bug is excessive tool permission, not the model.
+- **Adversarial images behind a JPEG/compression pipeline:** PGD through a differentiable JPEG (DiffJPEG) *matching the train-time augment pipeline* (e.g., α≈0.5/255, ±8/255 clamp, ~100 steps, survive quality 50–90); generic PGD on raw pixels won't survive re-encoding. DiffJPEG: `pip install DiffJPEG` or vendor from the challenge.
+- **Adversarial audio vs ASR (Whisper):** optimize the waveform under psychoacoustic constraints with differentiable DSP — minimize ASR loss on the target transcript without audible change.
+- **LLM-as-WAF:** encoding, fragmentation, and multilingual reformulations of the payload; prompt the WAF itself when allowed.
 
 ## Model Extraction & Inference
 

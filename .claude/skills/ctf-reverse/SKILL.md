@@ -23,7 +23,7 @@ Before installing anything below, check whether the tool/package already exists 
 
 **Python packages (all platforms):**
 ```bash
-pip install frida-tools angr qiling uncompyle6 capstone lief z3-solver
+pip install frida-tools angr qiling uncompyle6 capstone lief z3-solver unicorn
 # For Python 3.9+ bytecode: build pycdc from source
 git clone https://github.com/zrax/pycdc && cd pycdc && cmake . && make
 ```
@@ -46,6 +46,7 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 
 **Manual install:**
 - pwndbg — Linux: [GitHub](https://github.com/pwndbg/pwndbg), macOS: `brew install pwndbg/tap/pwndbg-gdb`
+- rustfilt (Rust symbol demangling) — `cargo install rustfilt`; Rust panic strings make good oracles
 
 **MCP servers (optional, agent-driven RE):** IDA Pro MCP ([mrexodia/ida-pro-mcp](https://github.com/mrexodia/ida-pro-mcp)), Ghidra MCP ([bethington/ghidra-mcp](https://github.com/bethington/ghidra-mcp) — has a headless server, no GUI needed), JADX MCP ([zinja-coder/jadx-ai-mcp](https://github.com/zinja-coder/jadx-ai-mcp)) — see [tools-mcp.md](tools-mcp.md) for setup and usage.
 
@@ -95,6 +96,11 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 - Huge nested lambdas / combinators → Church encoding: identify TRUE/SUCC/ADD/PAIR, rewrite as plain Python ops.
 - Tiny bytecode + short opcode switch → stack VM: write a disassembler, invert the transform chain from the end of the flag.
 - Unknown `e_machine`, ROM/console file, `.sys`/`.ko` "checker", DWARF-heavy ELF, or shader/printf logic → [exotic-targets.md](exotic-targets.md) (emulator + Ghidra processor first; ioctl dispatch; logic often lives outside the code).
+- Unusually large `.eh_frame`/`.pdata` (or a flag-checker with almost no code) → the unwinding/exception tables ARE the program: dump and decode them.
+- NN/model file used as the checker → dump the weights and solve with Z3 bitvectors; don't train.
+- Unusual base (ternary/balanced-ternary) or SIMD-heavy VM → write the custom disassembler/emulator before touching z3.
+- Rust proc-macro obfuscation → the macro expansion is the transform: `cargo expand` / compile samples to build the mapping.
+- pcap + VM binary where inter-packet timing varies → the timing gaps encode the bytecode (e.g., <~300 ms = 0 else 1); reconstruct bits first.
 
 ## Problem-Solving Workflow
 
