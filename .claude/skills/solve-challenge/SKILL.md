@@ -16,13 +16,7 @@ Goal: solve the challenge and find the flag.
 
 Tools: `bash scripts/install_ctf_tools.sh all` pre-installs everything. Otherwise each category skill lists its own prerequisites; install as you go. Model choice and stop-loss rules: [difficulty-routing.md](difficulty-routing.md).
 
-## Hypothesis First (before acting on any finding)
-
-1. **List 2-3 hypotheses** for what the bug, check, or vulnerability is, each with its evidence.
-2. **Rank them** by likelihood and cost to test.
-3. **Test each** with one cheap, read-only check first (`strings`, `checksec`, a breakpoint, a small input, one request). Escalate to fuzzing, exploit work, or full decompilation only after a cheap test supports a hypothesis.
-
-Follow the CTF rules in the project's `CLAUDE.md`.
+Follow the CTF rules in the project's `CLAUDE.md`, including its hypothesis-first rule (the single source for it).
 
 ## Workflow
 
