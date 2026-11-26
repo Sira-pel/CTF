@@ -1,6 +1,6 @@
 ---
 name: ctf-writeup
-description: Generates a single standardized submission-style CTF writeup for competition handoff and organizer review. Use after solving a CTF challenge to document the solution steps, tools used, and lessons learned in a structured format.
+description: Generates a single standardized submission-style CTF writeup for competition handoff and organizer review. Use only when the user explicitly asks for a full writeup; routine post-solve notes are the short notes from solve-challenge Step 5.
 license: MIT
 compatibility: Requires filesystem-based agent (Claude Code or similar) with bash and Python 3.
 allowed-tools: Bash Read Write Edit Glob Grep Task
@@ -8,6 +8,7 @@ metadata:
   user-invocable: "true"
   argument-hint: "[challenge-name]"
   author: Lukasz Jagiello
+disable-model-invocation: true
 ---
 
 # CTF Write-up Generator
@@ -16,6 +17,7 @@ Generate a standardized submission-style CTF writeup for a solved challenge.
 
 Default behavior:
 
+- Flag format: the one the user gives for the event; otherwise the one stated in the challenge.
 - During an active competition, optimize for speed, clarity, and reproducibility
 - Keep writeups short enough that a teammate or organizer can validate the solve quickly
 - Always produce a `submission`-style writeup
@@ -35,12 +37,12 @@ Collect the following from the current session, challenge files, and user input:
 # Scan for exploit scripts and artifacts
 find . -name '*.py' -o -name '*.sh' -o -name 'exploit*' -o -name 'solve*' | head -20
 # Check for flags in output files
-grep -rniE '(flag|ctf|eno|htb|pico)\{' . 2>/dev/null
+grep -rniE '(<event-prefix>|flag|ctf|eno|htb|pico)\{' . 2>/dev/null   # put the event's prefix first
 ```
 
 ### Step 2: Generate Write-up
 
-Write the writeup file as `writeup.md` (or `writeup-<challenge-name>.md`) using the submission template below.
+Write the writeup as `<challenge-slug>-writeup.md` in the challenge's notes folder (see `CLAUDE.md`), using the submission template below; keep the short solve notes (`<challenge-slug>.md`) untouched. **In-team only: during an event keep it in `notes/` and do not share or publish it outside the team until the event ends.**
 
 ---
 
@@ -56,7 +58,7 @@ date: YYYY-MM-DD
 category: web|pwn|crypto|reverse|forensics|osint|malware|misc|ai-ml
 difficulty: easy|medium|hard
 points: <number>
-flag_format: "flag{...}"
+flag_format: "<event format>"
 author: "<your name or team>"
 ---
 
@@ -87,7 +89,7 @@ author: "<your name or team>"
 ## Flag
 
 \`\`\`
-flag{example_flag_here}
+<prefix>{example_flag_here}
 \`\`\`
 ```
 

@@ -502,6 +502,8 @@ for func in bv.functions:
 
 ## Decompiler Comparison with dogbolt.org
 
+> **Note:** dogbolt.org is a third-party service — uploading a challenge binary sends it off-machine. Ask the user first; local cross-comparison (Ghidra + r2/IDA) works offline.
+
 **dogbolt.org** runs multiple decompilers simultaneously on the same binary and shows results side-by-side.
 
 **Supported decompilers:** Hex-Rays (IDA), Ghidra, Binary Ninja, angr, RetDec, Snowman, dewolf, Reko, Relyze.

@@ -79,7 +79,7 @@ binwalk suspicious_file      # Embedded files
 strings -n 8 suspicious_file
 hexdump -C suspicious_file | head  # Check magic bytes
 
-# Disk forensics
+# Disk forensics — sudo mount changes system state: ASK FIRST (or read the image directly with fls/mmls/7z x)
 sudo mount -o loop,ro image.dd /mnt/evidence
 fls -r image.dd              # List files
 photorec image.dd            # Carve deleted files
@@ -91,6 +91,13 @@ vol -f memory.dmp windows.filescan
 ```
 
 See [disk-and-memory.md](disk-and-memory.md) for full Volatility plugin reference, VM forensics, and coredump analysis.
+
+## Quick additions
+
+- Windows artifacts (EVTX/SAM/GPP/macro) one-liners: [windows.md](windows.md#quick-recipes).
+- HTTP object carving: `tshark -r cap.pcapng --export-objects http,out/`; unknown app protocol: script it in scapy after Wireshark "Follow stream".
+- Audio: spectrogram first (`sox in.wav -n spectrogram -o s.png`), then FFT bins with numpy.
+- ESP32 firmware: `esptool.py image_info`; ESP32/S2/S3 apps are Xtensa (Ghidra Xtensa plugin), C3/C6/H2 are RISC-V.
 
 ## Detailed Sections
 
@@ -119,6 +126,10 @@ Go port (emits a John-the-Ripper mask) against the KeePass process dump, **pagef
 **hiberfil.sys**, or a full RAM dump — recovers all but the first character. For the broader
 5 GB raw dump, drive **volatility3** (pslist, filescan, dumpfiles, windows.registry) rather than
 hand-carving. Ref: https://github.com/vdohney/keepass-password-dumper
+
+### Beacon/keys before crypto guessing
+- Cobalt Strike + pcap + process dump: find beacon POSTs, extract the ciphertext blob, run CS key extraction (cs-extract-key style) against the dump, decrypt with the HMAC/AES keys, then carve files.
+- Encrypted pcap + memory dump: carve `CLIENT_RANDOM` secrets into SSLKEYLOGFILE format → `tshark -o tls.keylog_file:keys.log -r cap.pcapng`. Recover key material before hypothesizing custom crypto.
 
 ### A documented KDF/AEAD recipe that won't decrypt: question input *types*, not just values
 treasury_leak and intern both have a written HKDF→AES-GCM recipe that fails to authenticate.

@@ -235,7 +235,7 @@ shodan search 'ssh.fingerprint:"ab:cd:ef:12:34:56:78:90"'
 
 ```bash
 # Step 1: Basic port scan finds port 22 open
-nmap -sS target.ctf
+nmap -sS target.ctf   # challenge targets only; bounded, never the event site
 # PORT   STATE SERVICE
 # 22/tcp open  ssh
 

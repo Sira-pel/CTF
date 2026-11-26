@@ -22,7 +22,6 @@ Before installing anything below, check whether the tool/package already exists 
 **Python packages (all platforms):**
 ```bash
 pip install "pwntools==4.15.0" "ROPgadget==7.7" "ropper==1.13.13"
-# or via script: bash scripts/install_ctf_tools.sh python
 ```
 
 **uv alternative:**
@@ -61,7 +60,7 @@ gem install one_gadget seccomp-tools
 - [overflow-basics.md](overflow-basics.md) - Stack/global buffer overflow, ret2win, canary bypass, canary byte-by-byte brute force on forking servers, struct pointer overwrite, signed integer bypass, hidden gadgets, stride-based OOB read leak, parser stack overflow via unchecked memcpy length with callee-saved register restoration
 - [rop-and-shellcode.md](rop-and-shellcode.md) - Core ROP chains (ret2libc, syscall ROP, rdx control, shell interaction), ret2csu, bad character XOR bypass, exotic x86 gadgets (BEXTR/XLAT/STOSB/PEXT), stack pivot via xchg rax,esp, sprintf() gadget chaining for bad character bypass, canary XOR epilogue as RDX zeroing gadget, stub_execveat syscall as execve alternative via read() return value
 - [rop-advanced.md](rop-advanced.md) - Advanced ROP techniques: double stack pivot to BSS via leave;ret, SROP (Sigreturn-Oriented Programming) with UTF-8 constraints, seccomp bypass, RETF architecture switch (x64→x32) for seccomp bypass, shellcode with input reversal, .fini_array hijack, ret2vdso, pwntools template, x32 ABI syscall aliasing for seccomp bypass, time-based blind shellcode exfiltration
-- [format-string.md](format-string.md) - Format string exploitation (leaks, GOT overwrite, blind pwn, filter bypass, canary leak, __free_hook, .rela.plt patching, saved EBP overwrite for .bss pivot, argv[0] overwrite for stack smash info leak, .fini_array loop for multi-stage exploitation, __printf_chk bypass with sequential %p, single-call leak + GOT overwrite, ROT13-encoded format string exploit through input transformation)
+- [format-string.md](format-string.md) - Format string exploitation (leaks, GOT overwrite, blind pwn, filter bypass, canary leak, __free_hook (legacy glibc), .rela.plt patching, saved EBP overwrite for .bss pivot, argv[0] overwrite for stack smash info leak, .fini_array loop for multi-stage exploitation, __printf_chk bypass with sequential %p, single-call leak + GOT overwrite, ROT13-encoded format string exploit through input transformation)
 - [advanced.md](advanced.md) - Seccomp advanced techniques, UAF, JIT, esoteric GOT, heap overlap via base conversion, tree data structure stack underallocation, ret2dlresolve, kernel exploitation (basic)
 - [heap-techniques.md](heap-techniques.md) - House of Apple 2 (+ setcontext SUID variant), House of Einherjar, House of Orange/Spirit/Lore/Force, heap grooming, custom allocators (nginx, talloc), classic unlink, musl libc heap (meta pointer + atexit hijack), tcache stashing unlink attack, unsafe unlink + top chunk consolidation
 - [heap-techniques-2.md](heap-techniques-2.md) - CTF-writeup heap variants: UAF vtable pointer encoding shell argument, uninitialized chunk residue pointer leak, tcache strcpy null-byte overflow + backward consolidation, adjacent-struct fn-pointer overflow for libc leak + GOT overwrite, hidden-menu tcache poisoning, tcache double-free + fake _IO_FILE vtable stdout hijack, tcache-to-fastbin promotion cross-bin attack, 6-bit index OOB + written_bytes accumulator, IS_MMAPED bit-flip for unsorted bin leak on calloc'd chunk, filename-regex-constrained fastbin via LSB-only heap pointer overwrite, custom allocator unsafe unlink to GOT
@@ -76,9 +75,9 @@ gem install one_gadget seccomp-tools
 - [kernel-techniques.md](kernel-techniques.md) - Kernel exploitation techniques: tty_struct kROP (fake vtable + stack pivot), AAW via ioctl register control, userfaultfd race stabilization, SLUB allocator internals (freelist hardening/obfuscation), leak via kernel panic, MADV_DONTNEED race window extension (DiceCTF 2026), cross-cache CPU-split attack (DiceCTF 2026), PTE overlap file write (DiceCTF 2026), addr_limit bypass via failed file open for kernel memory read/write
 - [kernel-bypass.md](kernel-bypass.md) - Kernel protection bypass: KASLR/FGKASLR bypass (__ksymtab), KPTI bypass (swapgs trampoline, signal handler, modprobe_path/core_pattern via ROP), SMEP/SMAP bypass, GDB kernel module debugging, initramfs/virtio-9p workflow, exploit templates, exploit delivery
 - [field-notes.md](field-notes.md) - Detailed pwn notes: heap exploitation quick reference, additional exploit notes, useful commands
+- [kernel-vm-escape.md](kernel-vm-escape.md) - Hard-target quick recipes (open on demand): kernel pwn unpack→debug→primitive ladder, QEMU device + virtio audits, V8/d8 addrOf/fakeObj + sandbox escape, CET (IBT vs shadow stack)
 - [attack-playbook.md](attack-playbook.md) - Linux userland attack playbook: recon of input/privilege boundaries, leak selection by mitigation, and primitive ranking workflow
 - [static-signals.md](static-signals.md) - Exploit-relevant static signals (libc version, seccomp policy, RELRO/PIE/canary/NX evidence) for exploitability assessment
-- [pwnable-tw/README.md](pwnable-tw/README.md) - 43 pwnable.tw writeups (orw, start, calc, hacknote, babystack, tcache_tear, death_note, dubblesort, applestore, bookwriter, and more) with per-challenge environment, protections, root-cause defects, and concrete exploitation chains
 - [tools-mcp.md](tools-mcp.md) - MCP server integration for pwn: WinDbg MCP session model (`open_cdb_dump`/`open_cdb_remote`/`open_kd_session` + `session_id`), crash-dump triage, in-dump `flag{` memory scanning, live breakpoint/hardware-watchpoint/memory-patch exploitation, `!dh -f` Windows mitigation check (the `checksec` equivalent), kernel-mode token stealing with kd; IDA/Ghidra MCP for exploit development (decompile the vulnerable function first, drop to assembly only for exact gadget bytes)
 
 ---
@@ -110,8 +109,9 @@ gdb -q binary -ex 'start' -ex 'checksec'
 python3 -c "from pwn import *; print(cyclic(200))"
 python3 -c "from pwn import *; print(cyclic_find(0x61616168))"
 
-# libc identification
+# libc identification — libc-database is optional (git clone https://github.com/niklasb/libc-database):
 ./libc-database/find puts <leaked_addr_last_3_nibbles>
+# libc.rip lookup by leaked offsets is fine; ask before uploading a libc or binary anywhere
 ```
 
 ## Source Code Red Flags
@@ -138,14 +138,23 @@ bash -c '{ echo "cmd1"; echo "cmd2"; sleep 1; } | nc host port'
 |-----------|--------|-------------|
 | PIE | Disabled | All addresses (GOT, PLT, functions) are fixed - direct overwrites work |
 | RELRO | Partial | GOT is writable - GOT overwrite attacks possible |
-| RELRO | Full | GOT is read-only - need alternative targets (hooks, vtables, return addr) |
+| RELRO | Full | GOT is read-only - need alternative targets (FSOP/vtables, exit_funcs, return addr; hooks removed in glibc 2.34+) |
 | NX | Enabled | Can't execute shellcode on stack/heap - use ROP or ret2win |
 | Canary | Present | Stack smash detected - need leak or avoid stack overflow (use heap) |
 
 **Quick decision tree:**
 - Partial RELRO + No PIE -> GOT overwrite (easiest, use fixed addresses)
-- Full RELRO -> target `__free_hook`, `__malloc_hook` (glibc < 2.34), or return addresses
+- Full RELRO -> FSOP / House of Apple 2 (`_IO_wfile_jumps`), `exit_funcs`, or return addresses. `__free_hook`/`__malloc_hook` were REMOVED in glibc 2.34+ — only consider them on a confirmed old libc
+- Modern-libc targets, pick by primitive: saved return address (leak `environ` for the stack), FSOP (`_IO_wfile_jumps` / House of Apple 2), `exit_funcs`/`__call_tls_dtors` (need the pointer-guard value or a way around it)
+- `run.sh` + `bzImage`/`.ko`, custom QEMU `-device`, or patched `d8` + `.diff` → open [kernel-vm-escape.md](kernel-vm-escape.md); CET: IBT only constrains indirect `call`/`jmp` (targets need `endbr64`); returns are constrained only if the shadow stack (SHSTK) is on — check before ruling out ROP
 - Stack canary present -> prefer heap-based attacks or leak canary first
+
+## Hard-set recognition lines
+
+- Provided/patched libc → diff it against stock first; the patch decides which house-of-X still applies
+- Title hints the intended path is logic, not memory corruption ("it's not a bug") → look for state-machine misuse first; don't force a UAF
+- Game engines / bytecode VMs → learn the bytecode first; move parsers and save/load are overflow hotspots
+- Rust with source → grep `unsafe`/`transmute` first (safe Rust ≠ whole binary safe); binary only → look for raw pointer arithmetic around `Vec`/slice bounds checks that were removed
 
 ## Stack Buffer Overflow
 
@@ -153,7 +162,7 @@ bash -c '{ echo "cmd1"; echo "cmd2"; sleep 1; } | nc host port'
 2. Check protections: `checksec --file=binary`
 3. No PIE + No canary = direct ROP
 4. Canary leak via format string or partial overwrite
-5. Canary brute-force byte-by-byte on forking servers (7*256 attempts max)
+5. Canary byte-by-byte on forking servers (≤7*256 attempts) — bounded brute force, OK per `CLAUDE.md`
 
 **ret2win with magic value:** Overflow -> `ret` (alignment) -> `pop rdi; ret` -> magic -> win(). **Stack alignment:** SIGSEGV in `movaps` = add extra `ret` gadget. **Offset:** buffer at `rbp - N`, return at `rbp + 8`, total = N + 8. **Input filtering:** assert payload avoids `memmem()` banned strings. **Gadgets:** `ROPgadget --binary binary | grep "pop rdi"`, or pwntools `ROP()` for hidden gadgets in CMP immediates. See [overflow-basics.md](overflow-basics.md) for full exploit code.
 
@@ -223,6 +232,8 @@ Leak libc via `puts@PLT(puts@GOT)`, return to vuln, stage 2 with `system("/bin/s
 
 ## Deep-Dive Notes
 
+Open only the supporting file matching the **confirmed** bug — not the whole folder.
+
 Use [field-notes.md](field-notes.md) once you have confirmed the challenge is truly exploitation-heavy.
 
 - Heap and allocator notes: House of Apple, tcache, unsafe unlink, talloc, UAF, FSOP
@@ -230,6 +241,7 @@ Use [field-notes.md](field-notes.md) once you have confirmed the challenge is tr
 - Sandbox and hybrid notes: pyjail crossover, busybox escapes, custom VMs, shell tricks, path sanitizers
 - Kernel and Windows notes: kernel playbooks, SEH, CFG bypass, privilege escalation
 - Historical case notes: older but still reusable CTF exploit patterns
+- Legacy-glibc heap references: [pwnable-tw/](pwnable-tw/README.md) — 43 pwnable.tw writeups (hooks-era glibc). On demand only: open just the one challenge file matching the confirmed bug, never the whole folder.
 
 ## 2026 refresh — techniques from the Lancang-Mekong retro
 
@@ -248,6 +260,7 @@ your controlled function without tripping `_IO_validate_vtable` (which only guar
   (gone since 2.34), which is exactly why FSOP replaced them.
 - pwntools has `FileStructure()` to build the fake FILE without counting offsets by hand.
 - See `heap-fsop.md` for the field layout; pick offsets against the *exact* target libc.
+- `_IO_obstack_jumps` variant (babyfile-class): fake FILE so the flush path calls `_IO_obstack_overflow` → controlled `chunkfun(extra_arg)` ≈ `system("/bin/sh")`. Works up to glibc 2.36; `_IO_obstack_jumps` was removed in 2.37 (bug 27124), so on 2.37+ use `_IO_wfile_jumps` / House of Apple 2 instead. Reach for it only when wfile FSOP paths are constrained on an older target.
 - Refs: https://oslike.github.io/2024/12/06/house-of-apple2 ·
   https://hareh4ru.github.io/posts/FSOP-for-libc-2.35-and-over ·
   original: Roderick's House of Apple posts.
@@ -266,6 +279,7 @@ For spillway we read the allowed-syscall set out of the disassembly. Faster: run
 binary under **`seccomp-tools dump ./bin`** to print the BPF filter directly.
 - Default ORW (open/read/write) is the usual escape; `mov rsi,rax` style gadgets to
   thread the opened fd into read, as we did, still apply.
+- On modern glibc, `open()` is often `openat(AT_FDCWD, …)` — if a filter allows `open` but not `openat`, build ORW with raw `SYS_open`/`syscall` gadgets (write the filename to BSS first), not libc wrappers (DiceCTF bop: raw-syscall ORW under seccomp).
 - If `open`/`openat` are blocked but `openat2` (439) or the 32-bit/x32 ABI is not, use
   those; a filter that doesn't pin the architecture is bypassable via `int 0x80` /
   syscall-number + 0x40000000. Check `seccomp-tools` output for a missing arch check.
@@ -280,6 +294,8 @@ binary under **`seccomp-tools dump ./bin`** to print the BPF filter directly.
 
 ## Field lessons (our solves)
 
+- **Fixed-buffer write primitive (write-flag-where-class).** When the program writes a fixed buffer (the flag) to an address you choose: parse `/proc/self/maps` + PIE base, then overwrite a *later-printed* `.data` string (GOT/exit path on harder variants).
+- **Non-glibc heaps.** Wine/Rust/custom allocator heaps: overflow into adjacent length/capacity/ptr fields → AAW, then pivot to stack ROP. Don't force tcache narratives onto them.
 - **Bad bytes inside addresses.** `gets()`/`scanf` stop at `0x0a` (and `strcpy` at `0x00`), including inside a little-endian address. Pick gadgets whose address bytes avoid the terminator in every position.
 - **cdecl argument cleanup in hand-built ROP chains.** A fake call to a one-argument function leaves the argument on the stack; follow it with a throwaway `pop reg; ret` so later gadgets are not misaligned.
 - **Safe-linking (glibc 2.32+).** `tcache`/fastbin `fd` is `(addr >> 12) ^ ptr`, so you need a heap leak to forge it. Overwriting `tcache_perthread_struct` avoids the mangling. Since glibc 2.34 the tcache double-free `key` is a random per-process value instead of the tcache pointer, so a UAF no longer leaks that address through it. The key is only a heuristic (the bin is still walked), and `tcache_get()` has no key check, so tcache poisoning still works. Confirm against the source of the libc you are given.

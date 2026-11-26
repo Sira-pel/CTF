@@ -30,3 +30,10 @@
 - Use exact rational arithmetic. Floating-point `lstsq` was ill-conditioned and gave ~9362 instead of 9359.
 - Differentials are linear constraints; free spider gears are expected nullspace.
 - Sanity check: a solution that is forced to 0 means a bad mesh assumption.
+
+## Extra details (merged from a second solve note)
+- Gear axis = local Y; axle axis = local X. Some gears sit ~3.5 LDU past the axle end: treat them as mounted. Gears with no axle are idlers (the supporting structure was removed).
+- Axle lengths: 3704/4519/32073/44294/3707 = 2/3/5/7/8.
+- Bevel mesh centre distance d≈25; take the ±1 ratio sign from the velocity at the contact point.
+- The checker ignores rotation direction (geometry gave −9359, it accepted +9359·input). If the sign is ambiguous, check the magnitude pattern first.
+- A wrong answer triggers a ~6 min cooldown.

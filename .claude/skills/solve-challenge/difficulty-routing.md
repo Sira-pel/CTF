@@ -3,10 +3,10 @@
 Use this reference when the `solve-challenge` skill needs to select, downgrade,
 escalate, park, or stop a solver.
 
-> **Note:** The `ctf_router.py` helper referenced below is a deterministic
-> reference implementation of these rules. If it is not present, apply the
-> scoring, stop-loss, and tier-gate rules manually — the methodology is the
-> source of truth, not the script.
+> **Note:** The `ctf_router.py` helper referenced below is not shipped with this
+> skill (the scripts/ folder is not part of the repo). Apply the scoring,
+> stop-loss, and tier-gate rules manually — the methodology is the source of
+> truth, not a script.
 
 ## Why routing is evidence-based
 
@@ -44,11 +44,7 @@ Keep one small JSON file per active challenge:
 }
 ```
 
-Run the router from the repository root:
-
-```bash
-python3 solve-challenge/scripts/ctf_router.py challenge-state.json
-```
+Evaluate the state against the rules below manually (there is no router script).
 
 The output contains:
 
@@ -219,11 +215,7 @@ Represent a candidate as JSON:
 }
 ```
 
-Evaluate it with:
-
-```bash
-python3 solve-challenge/scripts/ctf_router.py --submission candidate.json
-```
+Evaluate the candidate against the submission rules below manually (there is no router script):
 
 Rules:
 

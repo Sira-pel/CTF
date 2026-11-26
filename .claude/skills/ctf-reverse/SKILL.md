@@ -21,7 +21,7 @@ Before installing anything below, check whether the tool/package already exists 
 
 **Python packages (all platforms):**
 ```bash
-pip install frida-tools angr qiling uncompyle6 capstone lief z3-solver
+pip install frida-tools angr qiling uncompyle6 capstone lief z3-solver unicorn
 # For Python 3.9+ bytecode: build pycdc from source
 git clone https://github.com/zrax/pycdc && cd pycdc && cmake . && make
 ```
@@ -44,6 +44,7 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 
 **Manual install:**
 - pwndbg — Linux: [GitHub](https://github.com/pwndbg/pwndbg), macOS: `brew install pwndbg/tap/pwndbg-gdb`
+- rustfilt (Rust symbol demangling) — `cargo install rustfilt`; Rust panic strings make good oracles
 
 **MCP servers (optional, agent-driven RE):** IDA Pro MCP ([mrexodia/ida-pro-mcp](https://github.com/mrexodia/ida-pro-mcp)), Ghidra MCP ([bethington/ghidra-mcp](https://github.com/bethington/ghidra-mcp) — has a headless server, no GUI needed), JADX MCP ([zinja-coder/jadx-ai-mcp](https://github.com/zinja-coder/jadx-ai-mcp)) — see [tools-mcp.md](tools-mcp.md) for setup and usage.
 
@@ -71,6 +72,7 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 - [platforms.md](platforms.md) - Platform-specific RE: macOS/iOS (Mach-O, code signing, Objective-C runtime, Swift, dyld, jailbreak bypass), embedded/IoT firmware (binwalk, UART/JTAG/SPI extraction, ARM/MIPS, RTOS), kernel drivers (Linux .ko, eBPF, Windows .sys), game engines (Unreal Engine, Unity, anti-cheat, Lua), automotive CAN bus
 - [platforms-hardware.md](platforms-hardware.md) - Hardware and advanced architecture RE: HD44780 LCD controller GPIO reconstruction, RISC-V advanced (custom extensions, privileged modes, debugging), ARM64/AArch64 reversing and exploitation (calling convention, ROP gadgets, qemu-aarch64-static emulation)
 - [field-notes.md](field-notes.md) - Quick reference notes: binary types, anti-debugging bypass, specialized patterns, CTF case notes
+- [exotic-targets.md](exotic-targets.md) - Open on demand: exotic-arch triage (emulator + Ghidra processor), logic hidden in DWARF/unwind tables/printf/shaders/regex/NN checkers/packet timing, `.sys`/`.ko` IOCTL dispatch, big/SIMD/ternary VMs, Rust/Nim noise
 
 ---
 
@@ -84,6 +86,14 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 - If the binary is a real malware sample with C2, packing, or evasion behavior, switch to `/ctf-malware`.
 - If the challenge is a toy VM, encoding puzzle, or pyjail rather than a real binary, switch to `/ctf-misc`.
 
+## Weird-target recognition (check before deep RE)
+
+- Almost no code + huge `.rela`/`.dynsym` → ELF reloc VM: `readelf -rW -s`, map reloc types to ops, emulate in order (self-modifying; don't trust IDA's applied relocs), lift checks to Z3.
+- Bytecode as `a b c` triples (`mem[b] -= mem[a]; if ≤0 goto c`) → SUBLEQ/OISC/ELVM: find the interpreter loop, try a black-box linear I/O oracle before lifting.
+- Unknown `e_machine`, ROM/console file, `.sys`/`.ko` "checker", DWARF-heavy ELF, or shader/printf logic → [exotic-targets.md](exotic-targets.md) (emulator + Ghidra processor first; ioctl dispatch; logic often lives outside the code).
+- Deliberate HLT/UD2, `RtlInstallFunctionTableCallback`, or `.eh_frame`/`.pdata` far larger than the code → exception/unwind-table VM: dump and decode the tables offline instead of single-stepping.
+- NN/model file used as the checker → dump the weights and solve with Z3 bitvectors; don't train.
+
 ## Problem-Solving Workflow
 
 1. **Start with strings extraction** - many easy challenges have plaintext flags
@@ -93,13 +103,13 @@ r2pm -ci r2ghidra   # Native Ghidra decompiler for radare2
 5. **Try Qiling** - emulate foreign-arch binaries or bypass heavy anti-debug without artifacts
 6. **Map control flow** before modifying execution
 7. **Automate manual processes** via scripting (r2pipe, Frida, angr, Python)
-8. **Validate assumptions** by comparing decompiler outputs (dogbolt.org for side-by-side)
+8. **Validate assumptions** by comparing decompiler outputs — local Ghidra vs r2 `pdg` works offline; dogbolt.org is a quick side-by-side option but uploads the binary to a third party — ask first.
 
 ## Quick Wins (Try First!)
 
 ```bash
 # Plaintext flag extraction
-strings binary | grep -E "flag\{|CTF\{|pico"
+strings binary | grep -E "picoCTF\{|flag\{|CTF\{"   # add the event's prefix
 strings binary | grep -iE "flag|secret|password"
 rabin2 -z binary | grep -i "flag"
 
@@ -165,7 +175,7 @@ Two patterns: (1) `transform(flag) == stored_target` — reverse the transform. 
 ## Common Encryption Patterns
 
 - XOR with single byte - try all 256 values
-- XOR with known plaintext (`flag{`, `CTF{`)
+- XOR with known plaintext (the event's flag prefix, `picoCTF{`, `flag{`, `CTF{`)
 - RC4 with hardcoded key
 - Custom permutation + XOR
 - XOR with position index (`^ i` or `^ (i & 0xff)`) layered with a repeating key
@@ -250,3 +260,9 @@ of a constant-seeded blob was a dead end because the real target was a remote de
 - **Flag checkers:** hook `strcmp`/`memcmp` (Frida) to capture the expected value; if hooks are blocked or detected (`/proc/self/maps` scan, default Frida port 27042, which can be changed with `-l`, inline-hook checks; see [OWASP MASTG](https://mas.owasp.org/MASTG/knowledge/ios/MASVS-RESILIENCE/MASTG-KNOW-0087/)), emulate the routine or use symbolic execution.
 - **Decoy strings.** Binaries and APKs can hold several flag-like strings. Trace which one is actually printed or validated; a remote validator may hold the real check.
 - **Work backwards through invertible pipelines** (obfuscation stages, per-byte S-box plus permutation).
+- **Hand-traceable asm (picoCTF asm*): watch operand size.** `shl ax,16` zeroes ax; ah/al/ax ops leave upper eax untouched. Trace, then confirm with a 5-line Python sim — no hypothesis ritual needed.
+- **"Use Frida" hint on a packed PE: unpack statically first.** A high-entropy custom section starting `5d 00 00` is LZMA; if `FORMAT_ALONE` rejects it, use `FORMAT_RAW` (lc3/lp0/pb2) after the header — 13 bytes for `.lzma`-alone, 5 bytes (props + dict size) when the packer omits the length. Defender quarantines extracted `.exe`s — read from the zip in memory and store payloads byte-reversed.
+- **Stale-memory leaks in custom VMs/allocators.** With LIFO free lists: arm/write → free → reallocate a controlled object at the same offset → let the secret be written into it. Look for a built-in decrypt/print oracle opcode before inventing a readback.
+- **"Integrity" checks over length, not content,** and CRCs are affine — forge any target CRC by GF(2) linear solve over free bytes instead of brute force.
+- **Remote returns one generic error for everything?** Don't vary framing first. Locally check which stream carries errors (wrappers often hide stderr), make the payload valid in every other respect (seal, no stray `\n`/`\r`), then change one variable per request. Build a local oracle (WSL, with user OK) early.
+- **Parsed-but-unused structures** (e.g. an embedded sources table the VM never reads) hint at what the remote wrapper consumes.

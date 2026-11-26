@@ -100,6 +100,16 @@ python3 -c "from sympy import factorint; print(factorint(<n>))"
 # Sage alternative: sage -c "print(factor(<n>))"
 ```
 
+## Recognition → move (hard crypto)
+
+- Nonces from a linear generator (LCG/affine) → related-nonce lattice; only biased bits → HNP ([lattice-and-lwe.md](lattice-and-lwe.md)).
+- Secret sharing with fewer shares than the degree, but small secret/coefficients → CVP over the lattice of linear relations.
+- Noisy parity/LSB oracle or noisy CRC/linear checks → lattice cleanup or belief propagation, not exact binary search.
+- Same message under several RSA keys with small `e` → Hastad (check whether a PRNG picks `e`).
+- `Math.random()` (V8) → xorshift128+ state from ~3 consecutive doubles via z3/GF(2) (use more if samples aren't consecutive) — see [prng.md](prng.md).
+- Mixed modes (OFB + GCM, CBC + MAC) → look for keystream/nonce reuse across the two modes.
+- Custom DH group or a "cheap" DLOG oracle → check group-order smoothness first (Pohlig-Hellman before lattices).
+
 ## Detailed Sections
 
 Technique-by-technique notes (the long tail) live in [details.md](details.md). Read it, or grep it for your keyword, once the quick start and the topic files above have not settled the challenge.

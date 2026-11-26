@@ -13,7 +13,7 @@ metadata:
 
 # CTF Similar Challenge Search
 
-> **Warning:** this sends your search terms (possibly challenge text or code) to a third-party API (Tavily) and is designed to find writeups. Do not use it on a live competition: the project rules forbid looking up writeups of the current event. Only use it for practice challenges, after the user agrees.
+> **Note:** this sends your search terms (possibly challenge text or code) to a third-party API (Tavily) and is designed to find writeups. Past/other-event writeups are fine; never use it for the current event's challenges (`CLAUDE.md`). Keep queries focused so results stay useful.
 
 Search for similar CTF challenge writeups using Tavily API.
 
