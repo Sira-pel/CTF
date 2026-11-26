@@ -61,7 +61,7 @@ brew install ffmpeg qrencode
 - If the challenge is a real binary exploit instead of a jail, toy VM, or encoding problem, switch to `/ctf-pwn` or `/ctf-reverse`.
 - If the input is mostly files, images, audio, or packet captures that need recovery work first, switch to `/ctf-forensics`.
 - For ML/AI techniques (model attacks, adversarial examples, LLM jailbreaking), see `/ctf-ai-ml`.
-- If the NodeJS sandbox uses **vm2** (`npm ls vm2`), check for **CVE-2023-37466** via `Promise[@@species]` with `nesting:true` — the exception handler escapes the context; see `ctf-web/js-sandbox` for the full exploit chain. In misc challenges with bundled JS, always run `npm ls vm2` to detect vulnerable vm2 before trying other escapes.
+- If the NodeJS sandbox uses **vm2** (`npm ls vm2`), check for **CVE-2023-37466** (vm2 ≤ 3.9.19): a `Promise` `@@species` accessor bypasses handler sanitization and escapes the sandbox; see [node-and-prototype.md](../ctf-web/node-and-prototype.md) for JS sandbox escape chains. In misc challenges with bundled JS, always run `npm ls vm2` to detect vulnerable vm2 before trying other escapes.
 
 ## Quick Start Commands
 
@@ -86,6 +86,15 @@ python3 -c "from z3 import *; x=BitVec('x',32); s=Solver(); s.add(x^0xdead==0xbe
 # Python jail test
 python3 -c "__import__('os').system('id')"
 ```
+
+## Modern jail patterns
+
+- AST bans `Call`: decorator escape, or `class E(Exception): __getitem__ = os.system` then `raise E` / `except E as e: e["/bin/sh"]` — calls code without `ast.Call`. See [pyjails.md](pyjails.md).
+- Restricted pickle (no REDUCE/INST/OBJ/NEWOBJ): use **BUILD** to rebind `__setstate__`, grabbing callables via GLOBAL from `__main__`/pickle internals — no REDUCE needed. BUILD also writes `__dict__` directly, past a restricted `__setattr__`. See [pyjails.md](pyjails.md).
+- Audit-hook sandbox (`sys.addaudithook`): first list what the hook does *not* cover — unaudited functions (e.g. `_posixsubprocess.fork_exec`, already-imported modules), weak event-name filters, or state the hook trusts. Only when those are all closed does it need interpreter memory corruption (e.g. a UAF that zeroes the audit-hook list). Source/AST filter but `exec` of a code object: build `types.CodeType(...)` with your bytecode. Pickle scanner: exploit the parser differential (scanner vs `pickle.loads`) and memo (`PUT`/`GET`) to hide imports; a C++/custom pickle parser is pwn, not misc.
+- Reading a blocked flag on Linux: `/proc/self/fd/*` (an already-open handle), `/proc/self/mem` / `/proc/self/environ` (flag loaded into memory or env), or `/proc/self/map_files/*` (needs privileges) can expose it when `open(flag)` is filtered; tar/zip symlink tricks exploit checker-vs-extractor differentials.
+- Archive polyglots (zip + split 7z): one extractor materializes a symlink, the other follows it to the target file — never extract untrusted archives unsafely on the host.
+- Smart-contract challenges (Solidity) → `/ctf-web` [web3.md](../ctf-web/web3.md); use Foundry for local fork testing.
 
 ## Detailed Sections
 

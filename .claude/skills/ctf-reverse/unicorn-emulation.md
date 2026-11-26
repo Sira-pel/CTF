@@ -45,7 +45,7 @@ Raw binary and bare-metal emulation with Unicorn Engine. Sometimes easier to rev
 
 ```bash
 pip install unicorn==2.1.2 capstone keystone-engine
-# unicorn 2.1.2 is already pinned in scripts/install_ctf_tools.sh
+# 2.1.2 is the version the examples below were written against
 ```
 
 ```python

@@ -625,3 +625,10 @@ vol.py -f dump.vmem --profile=Win7SP1x64 dlllist -p PID
 **Key insight:** Don't hunt with `strings` alone. The Volatility plugin suite has a plugin for every artifact: mimikatz (plaintext), hashdump (hashes), printkey (registry), memdump (per-process memory), netscan (sockets), pstree (process hierarchy), dlllist (loaded modules). Run them in order from cheapest to most expensive.
 
 **References:** OtterCTF 2018 — multiple challenges, writeups 12569–12572, 12596
+
+## Quick recipes
+
+- EVTX triage: Security.evtx 4624 (logon) / 4688 (process create); System.evtx 7045 (service install); PowerShell-Operational 4104 (script block). `evtx_dump.py <log> | grep -E '<ids>'`, or `chainsaw hunt` with sigma rules.
+- SAM + SYSTEM hives: `impacket-secretsdump -sam SAM -system SYSTEM LOCAL` → NTLM hashes → `hashcat -m 1000` offline (offline cracking only).
+- GPP `Groups.xml` `cpassword`: the AES key is public — `gpp-decrypt <cpassword>` (look in SYSVOL/GPP shares).
+- Office macros: `olevba file.docm`; follow any URLs it fetches into the pcap.

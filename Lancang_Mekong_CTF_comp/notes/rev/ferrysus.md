@@ -1,4 +1,7 @@
-# ferry-inspect (REV 500, "Ferry Sus")
+# ferry-inspect (REV 500, "Ferry Sus") — SOLVED
+
+**Flag:** `LMC{one_forged_fare_crossed_the_river}`
+Solver: `Lancang_Mekong_CTF_comp/solved/rev_ferrysus/solve_ferry.py`. The opcode notes below are the working model; "Final solve" summarises how the later stages fell.
 
 ## Challenge
 - Binary `ferry-inspect` (Rust, x86-64 PIE, stripped): `./ferry-inspect route.bin PASS_HEX [GATE_HEX]`
@@ -68,7 +71,7 @@ i  w4     C      p0         D
 X = 0x1178, H = 0x7c, stage = 1. Stage key = **0xbd05ddf1**.
 (`python3 chain2.py` produces the pass; gdb shows "stage done".)
 
-## Stage 2 (in progress)
+## Stage 2 (working notes; blocker below was resolved in the final solver)
 Program = record 1 decrypted with seed `0xbd05ddf1 ^ 0x46455252 = 0xfb408fa3`.
 Ops: 1,2,3,5,6,7,15*6,8,9,16*5,10,11,12,13.
 - op2 forces 7..8 items but there are only 6 distinct w4 → one item must be duplicated
@@ -84,6 +87,12 @@ Ops: 1,2,3,5,6,7,15*6,8,9,16*5,10,11,12,13.
   0x39303670 but computes 0x21320e63. Back-solving that step needs p0 = 0xec097533,
   while the merged array really contains 0x859f02eb. So one more detail of the fold
   (mode/rotate for the first step, or which item op10 starts from) is still unmodelled.
+
+## Final solve (stages 3–10, merged from the summary note)
+- Commit key per stage = `(hash(imm, C) ^ acc) * 0x9e3779b1`; hash is the chained FNV of op13, initialised with the op13 immediate. The free last entry is unmixed so op12 matches; earlier entries are pinned by op16.
+- Stages 7 and 9, op24: `pow(lane[tag] % lane[lo], int_from_D, lane[lo]) == lane[hi]` (lanes from op23; exponent = D bytes little-endian, heap padding on the dword slots happened to be 0). Solved with Pohlig–Hellman: stage 7 modulus `0x3690f25c3bb` (order is a 41-bit prime, log fits in 40 bits); stage 9 modulus `0xf1e8add1c3895eb` (smooth `p-1`).
+- Stage 8, op25: the product of two u32 values packed from D[0..3] and D[4..7] equals lane 0; lane = `2521426997 * 3355721207`.
+- Stage 10, op22: `acc = imm XOR gate` before the mixer. Gate `0` passes locally; fold the remote connection's `GATE` value in before `SUBMIT`.
 
 ## Better approach (2026 retro)
 

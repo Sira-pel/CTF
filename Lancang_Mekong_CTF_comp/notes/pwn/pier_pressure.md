@@ -39,6 +39,11 @@ buffer `s` inside the command-loop function.
 Full exploit script (tested locally against the provided libc/loader before hitting
 the remote host): `/tmp/.../pier_pressure_extract/exploit.py` (pwntools).
 
+## Extra details (merged from the raw note)
+- The gadget starts at `base+0x12ef` as `push rbp; mov rbp, rsp; pop rdi; pop rsi; pop rdx; ret`, so entering there takes `rdi` from the saved-RBP slot; `base+0x12f3` skips the prologue.
+- Second stage alternative: one extra `ret` before `system` fixes the 16-byte stack alignment; libc `pop rdi; ret` is at `libc+0x277e5`.
+- Flag file on the remote: `/run/challenge/flag`.
+
 ## Flag
 ```
 LMC{too_many_notes_for_one_pier}

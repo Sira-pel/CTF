@@ -18,8 +18,9 @@ ctf_practice/                 Practice challenges
 
 Category is whatever the note calls it (pwn, rev, crypto, forensics, web),
 except the `Team_Work`-track challenges (intern, merge_emergency, moon_lover),
-which are grouped under `team/`. Where both a raw working note and a cleaned-up
-write-up exist, the raw one is suffixed `_raw`. Some unsolved challenges
+which are grouped under `team/`. One note per challenge: if there is more
+than one, merge them. A full writeup (only when asked) is `<challenge>-writeup.md`
+and a handoff `<challenge>-handoff.md`, next to the note. Some unsolved challenges
 (`naga_weave`, `treaty_of_six_gates`) have notes only, no files.
 
 ## Workflow
