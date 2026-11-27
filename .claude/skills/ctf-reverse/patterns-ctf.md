@@ -591,6 +591,18 @@ print(pt.decode())
 
 **References:** BSidesSF 2026 "Ran Somewhere"
 
+**Variant: seed stored in the output file (HTB "HILLarious").** Before hooking or running anything, check whether the encrypted file's header stores the key material, e.g. `magic | u64 time() seed | u32 orig_len | data`. If all key derivation is a pure function of the header, re-implement it and decrypt offline. Recognise home-made KDFs and PRNGs by their constants:
+
+| Constant | Meaning |
+|---|---|
+| `0xcbf29ce484222325` / `0x100000001b3` | FNV-1a 64 offset / prime (32-bit: `0x811c9dc5` / `0x01000193`) |
+| `0x5851f42d4c957f2d` | PCG / Knuth MMIX LCG multiplier |
+| `0x41c64e6d` + `0x3039` | glibc `rand_r` / ANSI LCG |
+| `0x6c078965`, `0x9908b0df` | MT19937 init / twist |
+| `0x9e3779b9` / `0x9e3779b97f4a7c15` | golden ratio (TEA, splitmix64, hash mixing) |
+
+Hill cipher mod 256: the matrix is invertible iff its determinant is odd. Decrypt in reverse order of the layers, e.g. XOR first, then multiply by the inverse matrix. Truncate the padding using the stored length.
+
 ---
 
 ## ELF Section Header Corruption for Anti-Analysis (BSidesSF 2026)

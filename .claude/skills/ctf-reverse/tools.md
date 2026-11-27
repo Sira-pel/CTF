@@ -403,6 +403,7 @@ plaintext = cipher.decrypt(ct)
 upx -d packed -o unpacked
 strings binary | grep UPX     # Check for UPX signature
 ```
+If `upx` isn't installed, ask the user before fetching the official static release (`github.com/upx/upx/releases`, `upx-*-amd64_linux.tar.xz`) into the scratchpad. It needs no sudo. Don't run the packed binary to dump it.
 
 ### Custom Packers
 1. Set breakpoint after unpacking stub

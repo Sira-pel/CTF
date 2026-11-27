@@ -572,6 +572,22 @@ Binary reads the system date and only executes correctly on a specific date (e.g
 
 **Detection:** Look for comparisons against large integer constants that fall in a recognizable date range (Unix timestamps: 2012 = ~1.35B, 2017 = ~1.5B). Cultural significance helps: apocalypse dates, CTF release dates, historical events.
 
+**Prefer a static brute force before running anything.** If the key or password comes from `srand(f(time/localtime))` and the story gives a date window, re-implement `f` and enumerate it offline:
+- Copy the seed formula exactly: `tm` field weights, `tm_mon+1`, `tm_year+1900`, and **int32 wrap** (`& 0xffffffff`) when the asm uses 32-bit `imul`.
+- Get the real glibc `rand()` through `ctypes.CDLL("libc.so.6")` (`srand`/`rand`), so you don't have to reimplement it.
+- Keep the charset order exactly as the binary builds it, including optional segments (try every flag combination).
+- Use the ciphertext as the oracle: valid PKCS#7 padding, a known prefix such as `HTB{`, or printable output.
+- A day has 86,400 seeds, so a few days takes seconds even in Python. Timezone doesn't matter if you enumerate local-time fields directly.
+
+```python
+libc = ctypes.CDLL("libc.so.6")
+for day, h, m, s in product((10, 11), range(24), range(60), range(60)):
+    libc.srand((s + m*100 + h*10**4 + day*10**6 + 12*10**8 + 2013*10**10) & 0xffffffff)
+    pw = "".join(cs[libc.rand() % len(cs)] for _ in range(20))
+    if oracle(pw): print(pw); break
+```
+(HTB "Wayback".) Fall back to faketime only when the derivation is too complex to lift:
+
 ```bash
 # Set system clock to the required date
 sudo date -s "2012-12-21 00:00:00"

@@ -65,6 +65,12 @@ Decode chunk payloads, walk PROP entries for `Source` field, dump `Script.Source
 3. Extract and open project in Godot editor
 4. Search scripts/resources for flag data
 
+**No-tools fallback (Godot 4.x, PCK v2), using [`scripts/godot_pck.py`](scripts/godot_pck.py):**
+- Identify it from the `GDPC` magic. Bit 0 of the `u32` flags at 0x14 means the directory is encrypted with AES-256-CFB. The key is the 32-byte `script_encryption_key` global in the exe.
+- `findkey`: try every 4-aligned 32-byte window of the exe as the key, decrypt the first directory block, look for `res://`, then confirm with the stored MD5. No false positives, about 40 s for a 44 MB exe.
+- `unpack`: walk the directory and decrypt entries with `flags & 1`. In 4.x exports the `.gd` files come out as **plain source**, so you can `cat` them directly; `.gdc` bytecode still needs gdsdecomp.
+- Malware-themed games: replay obfuscated array-building code in Python in the **same statement order**, because variables get reassigned after use. Gotcha: in Godot 4, `"".join(int_array)` gives decimal strings (`[57,151]` becomes `"57151"`), not chars. (HTB "GameLoader".)
+
 ---
 
 ## Rust serde_json Schema Recovery
