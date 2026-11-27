@@ -1,0 +1,277 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+strip_input() {
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  s="${s#\"}"
+  s="${s%\"}"
+  s="${s#\'}"
+  s="${s%\'}"
+  printf '%s' "$s"
+}
+
+resolve_skill() {
+  case "$1" in
+    rev|reverse|/ctf-reverse)     printf '/ctf-reverse' ;;
+    pwn|/ctf-pwn)                 printf '/ctf-pwn' ;;
+    web|/ctf-web)                 printf '/ctf-web' ;;
+    crypto|/ctf-crypto)           printf '/ctf-crypto' ;;
+    forensics|/ctf-forensics)     printf '/ctf-forensics' ;;
+    misc|/ctf-misc)               printf '/ctf-misc' ;;
+    /*)                           printf '%s' "$1" ;;
+    *)                            printf '/%s' "$1" ;;
+  esac
+}
+
+grab_clipboard_image() {
+  local out_path="/tmp/ctf_clip_$(date +%s).png"
+  if command -v wl-paste >/dev/null 2>&1 && wl-paste --list-types 2>/dev/null | grep -q 'image/png'; then
+    wl-paste --type image/png > "$out_path"
+  elif command -v xclip >/dev/null 2>&1 && xclip -selection clipboard -t TARGETS -o 2>/dev/null | grep -q 'image/png'; then
+    xclip -selection clipboard -t image/png -o > "$out_path"
+  elif command -v powershell.exe >/dev/null 2>&1 && command -v wslpath >/dev/null 2>&1; then
+    local win_img
+    win_img=$(wslpath -w "$out_path")
+    powershell.exe -NoProfile -STA -Command "
+      Add-Type -AssemblyName System.Windows.Forms
+      \$img = [System.Windows.Forms.Clipboard]::GetImage()
+      if (\$img) { \$img.Save('$win_img', [System.Drawing.Imaging.ImageFormat]::Png); exit 0 }
+      exit 1
+    " >/dev/null 2>&1 || true
+  fi
+
+  if [[ -s "$out_path" ]]; then
+    echo "Saved clipboard image to $out_path" >&2
+    printf '%s' "$out_path"
+  else
+    echo "Warning: No image found in clipboard. Continuing without description." >&2
+    rm -f "$out_path"
+  fi
+}
+
+build_desc_block() {
+  local raw="$1"
+  local clean lower
+  clean=$(strip_input "$raw")
+  lower="${clean,,}"
+
+  if [[ "$clean" == "clip" ]]; then
+    clip_tmp=$(grab_clipboard_image)
+    [[ -n "$clip_tmp" ]] && desc_block="Challenge description image (inspect this image): $clip_tmp"
+  elif [[ -f "$clean" && "$lower" =~ \.(png|jpg|jpeg|webp|gif)$ ]]; then
+    local img_abs
+    img_abs=$(realpath "$clean")
+    desc_block="Challenge description image (inspect this image): $img_abs"
+  elif [[ -n "$raw" ]]; then
+    desc_block="Description:"$'\n'"$raw"
+  fi
+}
+
+show_help() {
+  cat <<'EOF'
+ctfgo - Auto-cd into a CTF challenge directory and launch Claude with a triage prompt.
+
+Usage:
+  ctfgo [options]                           Interactive mode
+  ctfgo [options] <file|url> [skill] [desc] Fast CLI mode
+  ctfgo -h | --help                         Show this help message
+
+Options:
+  -s, --skill <name>    Skill shorthand or /custom (default: rev)
+  -d, --desc <val>      Description text, image path, or 'clip'
+  -c, --clip            Shortcut for --desc clip (grab clipboard image)
+  -m, --model <name>    Pass --model <name> to claude
+  -n, --dry-run         Print target dir and prompt without downloading or launching claude
+  -h, --help            Show this help message
+
+Skills:
+  rev       -> /ctf-reverse
+  pwn       -> /ctf-pwn
+  web       -> /ctf-web
+  crypto    -> /ctf-crypto
+  forensics -> /ctf-forensics
+  misc      -> /ctf-misc
+  /custom   -> any /skill-name
+
+Examples:
+  ctfgo
+  ctfgo ./chall pwn
+  ctfgo ./chall pwn clip
+  ctfgo -c ./chall
+  ctfgo -s web -d "find the admin password" ./chall
+  ctfgo "https://..."
+  ctfgo "https://..." rev clip
+EOF
+}
+
+skill=""
+desc_arg=""
+model=""
+dry_run=false
+positional=()
+
+while (( $# > 0 )); do
+  case "$1" in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    -s|--skill)
+      [[ $# -lt 2 ]] && { echo "Error: $1 requires an argument." >&2; exit 1; }
+      skill=$(resolve_skill "$2")
+      shift 2
+      ;;
+    -d|--desc)
+      [[ $# -lt 2 ]] && { echo "Error: $1 requires an argument." >&2; exit 1; }
+      desc_arg="$2"
+      shift 2
+      ;;
+    -c|--clip)
+      desc_arg="clip"
+      shift
+      ;;
+    -m|--model)
+      [[ $# -lt 2 ]] && { echo "Error: $1 requires an argument." >&2; exit 1; }
+      model="$2"
+      shift 2
+      ;;
+    -n|--dry-run)
+      dry_run=true
+      shift
+      ;;
+    --)
+      shift
+      positional+=("$@")
+      break
+      ;;
+    -*)
+      echo "Error: Unknown option: $1" >&2
+      show_help >&2
+      exit 1
+      ;;
+    *)
+      positional+=("$1")
+      shift
+      ;;
+  esac
+done
+
+desc_block=""
+clip_tmp=""
+
+if (( ${#positional[@]} >= 1 )); then
+  file_path=$(strip_input "${positional[0]}")
+  [[ -z "$skill" ]] && skill=$(resolve_skill "${positional[1]:-rev}")
+
+  if [[ -z "$desc_arg" && ${#positional[@]} -ge 3 ]]; then
+    desc_arg="${positional[*]:2}"
+  fi
+  [[ -n "$desc_arg" ]] && build_desc_block "$desc_arg"
+else
+  # Interactive mode
+  read -e -p "File path or URL: " file_path
+  file_path=$(strip_input "$file_path")
+
+  if [[ -z "$desc_arg" ]]; then
+    echo "Description (paste text + Enter on empty line, enter image path, or type 'clip' for clipboard image):"
+    desc_lines=()
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && break
+      desc_lines+=("$line")
+    done
+    if (( ${#desc_lines[@]} > 0 )); then
+      desc_arg=$(printf '%s\n' "${desc_lines[@]}")
+    fi
+  fi
+  [[ -n "$desc_arg" ]] && build_desc_block "$desc_arg"
+
+  if [[ -z "$skill" ]]; then
+    echo "Select skill:"
+    echo "  1) /ctf-reverse"
+    echo "  2) /ctf-pwn"
+    echo "  3) /ctf-web"
+    echo "  4) /ctf-crypto"
+    echo "  5) /ctf-forensics"
+    echo "  6) Custom (type your own)"
+    read -r -p "Choice [1-6]: " skill_choice
+
+    case "$skill_choice" in
+      1) skill="/ctf-reverse" ;;
+      2) skill="/ctf-pwn" ;;
+      3) skill="/ctf-web" ;;
+      4) skill="/ctf-crypto" ;;
+      5) skill="/ctf-forensics" ;;
+      6) read -r -p "Enter skill (e.g. /ctf-misc): " custom_skill
+         skill=$(resolve_skill "$custom_skill") ;;
+      *) echo "Invalid choice, defaulting to /ctf-reverse"; skill="/ctf-reverse" ;;
+    esac
+  fi
+fi
+
+if [[ -n "$clip_tmp" ]]; then
+  trap 'rm -f "$clip_tmp"' EXIT
+fi
+
+if [[ "$file_path" =~ ^https?:// ]]; then
+  dl_url="$file_path"
+  read -rp "Folder name to download into: " dl_folder
+  dl_folder=$(strip_input "$dl_folder")
+  dl_folder="${dl_folder%/}"
+  [[ -z "$dl_folder" ]] && { echo "Error: Folder name cannot be empty." >&2; exit 1; }
+
+  if [[ "$dry_run" == true ]]; then
+    target_dir=$(realpath -m "$dl_folder")
+    prompt_file="."
+    echo "[Dry run] Would run: dlfile \"$dl_folder\" \"$dl_url\""
+  else
+    command -v dlfile >/dev/null 2>&1 || { echo "Error: 'dlfile' not found in PATH." >&2; exit 1; }
+    dlfile "$dl_folder" "$dl_url"
+    file_path="$dl_folder"
+  fi
+fi
+
+if [[ "$dry_run" != true || -z "${target_dir:-}" ]]; then
+  if [[ -z "$file_path" || ! -e "$file_path" ]]; then
+    echo "Error: Path does not exist: ${file_path:-<empty>}" >&2
+    exit 1
+  fi
+
+  if [[ -d "$file_path" ]]; then
+    target_dir=$(realpath "$file_path")
+    prompt_file="."
+  else
+    target_dir=$(realpath "$(dirname "$file_path")")
+    prompt_file=$(basename "$file_path")
+  fi
+fi
+
+prompt="file: $prompt_file"
+if [[ -n "$desc_block" ]]; then
+  prompt+=$'\n'"$desc_block"
+fi
+prompt+=$'\n\n'"$skill"
+prompt+=$'\n\n'"Find the flag. Use any local tools. Triage first (file, checksec, strings, ctf triage), then static analysis before running anything."
+
+if [[ "$dry_run" == true ]]; then
+  echo "----------------------------------------"
+  echo "Directory: $target_dir"
+  echo "----------------------------------------"
+  echo "[Dry run] Prompt:"
+  printf '%s\n' "$prompt"
+  exit 0
+fi
+
+command -v claude >/dev/null 2>&1 || { echo "Error: 'claude' not found in PATH." >&2; exit 1; }
+
+cd "$target_dir"
+echo "----------------------------------------"
+echo "Directory: $(pwd)"
+echo "----------------------------------------"
+
+if [[ -n "$model" ]]; then
+  claude --model "$model" "$prompt"
+else
+  claude "$prompt"
+fi

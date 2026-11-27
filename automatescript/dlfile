@@ -9,38 +9,81 @@ Usage:
   dlfile [options] <url> [folder] [filename]    Auto-detect URL as 1st arg
 
 Options:
-  -x, --extract    Auto-extract after downloading (zip, tar.gz, gzip, tar, 7z)
-  -y, --yes        Overwrite existing file without prompting
-  -h, --help       Show this help message
+  -F, --folder <dir>   Parent folder name
+  -f, --file <name>    Output file name (default: <folder_basename>_file)
+  -u, --url <url>      Download URL
+  -x, --extract        Auto-extract after downloading (zip, tar.gz, gzip, tar, 7z)
+  -y, --yes            Overwrite existing file without prompting
+  -h, --help           Show this help message
 
-Defaults:
-  filename defaults to <folder>_file if left blank.
-  By default, dlfile only downloads the file without extracting.
+Examples:
+  dlfile
+  dlfile wayback "https://..."
+  dlfile -F wayback -u "https://..."
+  dlfile -F wayback -f chall.zip -u "https://..." -x -y
 EOF
+}
+
+strip_input() {
+    local s="$1"
+    s="${s#"${s%%[![:space:]]*}"}"
+    s="${s%"${s##*[![:space:]]}"}"
+    s="${s#\"}"
+    s="${s%\"}"
+    s="${s#\'}"
+    s="${s%\'}"
+    printf '%s' "$s"
 }
 
 extract=false
 overwrite=false
+flag_folder=""
+flag_file=""
+flag_url=""
 args=()
-for arg in "$@"; do
-    case "$arg" in
+
+while (( $# > 0 )); do
+    case "$1" in
         -h|--help)
             usage
             exit 0
             ;;
+        -F|--folder)
+            [[ $# -lt 2 ]] && { echo "Error: $1 requires an argument." >&2; exit 1; }
+            flag_folder="$2"
+            shift 2
+            ;;
+        -f|--file)
+            [[ $# -lt 2 ]] && { echo "Error: $1 requires an argument." >&2; exit 1; }
+            flag_file="$2"
+            shift 2
+            ;;
+        -u|--url)
+            [[ $# -lt 2 ]] && { echo "Error: $1 requires an argument." >&2; exit 1; }
+            flag_url="$2"
+            shift 2
+            ;;
         -x|--extract)
             extract=true
+            shift
             ;;
         -y|--yes)
             overwrite=true
+            shift
+            ;;
+        --)
+            shift
+            args+=("$@")
+            break
             ;;
         -*)
-            echo "Error: Unknown option: $arg" >&2
+            echo "Error: Unknown option: $1" >&2
             usage >&2
             exit 1
             ;;
         *)
-            args+=("$arg")
+            args+=("$1")
+            shift
             ;;
     esac
 done
@@ -50,42 +93,47 @@ arg2="${args[1]:-}"
 arg3="${args[2]:-}"
 
 if [[ "$arg1" =~ ^https?:// ]]; then
-    url="$arg1"
-    folder="$arg2"
-    filename="$arg3"
+    url="${flag_url:-$arg1}"
+    folder="${flag_folder:-$arg2}"
+    filename="${flag_file:-$arg3}"
 else
-    folder="$arg1"
-    url="$arg2"
-    filename="$arg3"
+    folder="${flag_folder:-$arg1}"
+    url="${flag_url:-$arg2}"
+    filename="${flag_file:-$arg3}"
 fi
 
 if [[ -z "$folder" ]]; then
     read -rp "Parent folder name: " folder
 fi
+folder="$(strip_input "$folder")"
+folder="${folder%/}"
+
 if [[ -z "$folder" || "$folder" =~ ^https?:// ]]; then
     echo "Error: Invalid parent folder name." >&2
     exit 1
 fi
 
-default_filename="${folder}_file"
-if [[ -z "$filename" && -z "$arg2" ]]; then
+base_name="$(basename "$(realpath -m "$folder")")"
+default_filename="${base_name}_file"
+
+if [[ -z "$filename" && -z "$arg2" && ( -z "$flag_folder" || -z "$flag_url" ) ]]; then
     read -rp "File name [$default_filename]: " filename
 fi
+filename="$(strip_input "${filename:-$default_filename}")"
 filename="${filename:-$default_filename}"
 
 if [[ -z "$url" ]]; then
     read -rp "Download URL: " url
 fi
-# Strip accidental surrounding quotes from pasted URLs
-url="${url#\"}"
-url="${url%\"}"
-url="${url#\'}"
-url="${url%\'}"
+url="$(strip_input "$url")"
 
 if [[ -z "$url" ]]; then
     echo "Error: URL cannot be empty." >&2
     exit 1
 fi
+
+command -v curl >/dev/null 2>&1 || { echo "Error: 'curl' is not installed." >&2; exit 1; }
+command -v file >/dev/null 2>&1 || { echo "Error: 'file' is not installed." >&2; exit 1; }
 
 out="${folder}/${filename}"
 if [[ -e "$out" && "$overwrite" != true ]]; then
@@ -111,6 +159,7 @@ echo "[+] Saved: ${out} ($(file -b "$out"))"
 if [[ "$extract" == true ]]; then
     case "$mime" in
         application/zip)
+            command -v unzip >/dev/null 2>&1 || { echo "Error: 'unzip' is not installed." >&2; exit 1; }
             echo "[+] Extracting zip..."
             unzip -o "$out" -d "$folder"
             ;;
@@ -128,6 +177,7 @@ if [[ "$extract" == true ]]; then
             tar -xf "$out" -C "$folder"
             ;;
         application/x-7z-compressed)
+            command -v 7z >/dev/null 2>&1 || { echo "Error: '7z' is not installed." >&2; exit 1; }
             echo "[+] Extracting 7z..."
             7z x -y -o"$folder" "$out"
             ;;
