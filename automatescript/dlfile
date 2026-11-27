@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat << 'EOF'
+Usage:
+  dlfile [options]                              Interactive mode
+  dlfile [options] <folder> <url> [filename]    Download into <folder>/<filename>
+  dlfile [options] <url> [folder] [filename]    Auto-detect URL as 1st arg
+
+Options:
+  -x, --extract    Auto-extract after downloading (zip, tar.gz, gzip, tar, 7z)
+  -y, --yes        Overwrite existing file without prompting
+  -h, --help       Show this help message
+
+Defaults:
+  filename defaults to <folder>_file if left blank.
+  By default, dlfile only downloads the file without extracting.
+EOF
+}
+
+extract=false
+overwrite=false
+args=()
+for arg in "$@"; do
+    case "$arg" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -x|--extract)
+            extract=true
+            ;;
+        -y|--yes)
+            overwrite=true
+            ;;
+        -*)
+            echo "Error: Unknown option: $arg" >&2
+            usage >&2
+            exit 1
+            ;;
+        *)
+            args+=("$arg")
+            ;;
+    esac
+done
+
+arg1="${args[0]:-}"
+arg2="${args[1]:-}"
+arg3="${args[2]:-}"
+
+if [[ "$arg1" =~ ^https?:// ]]; then
+    url="$arg1"
+    folder="$arg2"
+    filename="$arg3"
+else
+    folder="$arg1"
+    url="$arg2"
+    filename="$arg3"
+fi
+
+if [[ -z "$folder" ]]; then
+    read -rp "Parent folder name: " folder
+fi
+if [[ -z "$folder" || "$folder" =~ ^https?:// ]]; then
+    echo "Error: Invalid parent folder name." >&2
+    exit 1
+fi
+
+default_filename="${folder}_file"
+if [[ -z "$filename" && -z "$arg2" ]]; then
+    read -rp "File name [$default_filename]: " filename
+fi
+filename="${filename:-$default_filename}"
+
+if [[ -z "$url" ]]; then
+    read -rp "Download URL: " url
+fi
+# Strip accidental surrounding quotes from pasted URLs
+url="${url#\"}"
+url="${url%\"}"
+url="${url#\'}"
+url="${url%\'}"
+
+if [[ -z "$url" ]]; then
+    echo "Error: URL cannot be empty." >&2
+    exit 1
+fi
+
+out="${folder}/${filename}"
+if [[ -e "$out" && "$overwrite" != true ]]; then
+    read -rp "File '${out}' already exists. Overwrite? [y/N]: " ans
+    if [[ ! "$ans" =~ ^[Yy]$ ]]; then
+        echo "Aborted."
+        exit 0
+    fi
+fi
+
+tmpfile="$(mktemp)"
+trap 'rm -f "$tmpfile"' EXIT
+
+echo "[+] Downloading to ${out}..."
+curl -LsS -f --connect-timeout 15 -o "$tmpfile" "$url"
+
+mkdir -p "$folder"
+mv -f "$tmpfile" "$out"
+
+mime="$(file -b --mime-type "$out")"
+echo "[+] Saved: ${out} ($(file -b "$out"))"
+
+if [[ "$extract" == true ]]; then
+    case "$mime" in
+        application/zip)
+            echo "[+] Extracting zip..."
+            unzip -o "$out" -d "$folder"
+            ;;
+        application/gzip|application/x-gzip)
+            if tar -tzf "$out" >/dev/null 2>&1; then
+                echo "[+] Extracting tar.gz..."
+                tar -xzf "$out" -C "$folder"
+            else
+                echo "[+] Extracting gzip..."
+                mv "$out" "${out}.gz" && gunzip -f "${out}.gz"
+            fi
+            ;;
+        application/x-tar)
+            echo "[+] Extracting tar..."
+            tar -xf "$out" -C "$folder"
+            ;;
+        application/x-7z-compressed)
+            echo "[+] Extracting 7z..."
+            7z x -y -o"$folder" "$out"
+            ;;
+        *)
+            echo "[!] Not a supported archive format, skipping extraction."
+            ;;
+    esac
+fi

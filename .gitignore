@@ -29,3 +29,7 @@ ctf_practice/exercises/pwn/horsepower/d8
 
 # Large handout archives kept locally only
 Lancang_Mekong_CTF_comp/unsolved/team_moon_lover/moon_memdump1.zip
+
+# GameLoader: re-extractable from gameloader.zip (avoid ~46MB duplicate)
+ctf_practice/exercises/rev/gameloader/extracted/
+ctf_practice/exercises/rev/gameloader/pck_out/
