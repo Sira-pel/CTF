@@ -1,0 +1,425 @@
+#!/usr/bin/env python3
+"""Download one or multiple CTF challenge files into separate subfolders."""
+
+from __future__ import annotations
+
+import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from pathlib import Path
+import shlex
+import shutil
+import subprocess
+import sys
+import tempfile
+
+
+@dataclass
+class ChallengeItem:
+    subfolder: str
+    url: str
+    filename: str
+
+
+def strip_input(value: str) -> str:
+    """Trim whitespace and matching outer quotes from pasted input."""
+    s = value.strip()
+    if len(s) >= 2 and ((s[0] == s[-1] == '"') or (s[0] == s[-1] == "'")):
+        s = s[1:-1]
+    return s.strip()
+
+
+def is_url(value: str) -> bool:
+    return value.startswith("http://") or value.startswith("https://")
+
+
+def default_filename_for(subfolder: str) -> str:
+    base = Path(subfolder.rstrip("/")).name or "challenge"
+    return f"{base}_file"
+
+
+def resolve_target_dir(parent: str, subfolder: str) -> Path:
+    sub = subfolder.strip().strip("/")
+    if not parent or parent == ".":
+        return Path(sub)
+    return Path(parent.rstrip("/")) / sub
+
+
+def check_dependencies() -> None:
+    for cmd in ("curl", "file"):
+        if shutil.which(cmd) is None:
+            print(f"Error: '{cmd}' is not installed.", file=sys.stderr)
+            sys.exit(1)
+
+
+def parse_pair_tokens(tokens: list[str]) -> ChallengeItem:
+    """Parse 2 or 3 tokens into a ChallengeItem, auto-detecting URL position."""
+    if len(tokens) < 2 or len(tokens) > 3:
+        raise ValueError(f"Expected '<subfolder> <url> [filename]', got: {' '.join(tokens)}")
+
+    a = strip_input(tokens[0])
+    b = strip_input(tokens[1])
+    c = strip_input(tokens[2]) if len(tokens) == 3 else ""
+
+    if is_url(a) and not is_url(b):
+        url, subfolder = a, b
+    elif is_url(b) and not is_url(a):
+        subfolder, url = a, b
+    else:
+        raise ValueError(f"Could not find a valid http(s) URL in: {' '.join(tokens)}")
+
+    subfolder = subfolder.rstrip("/")
+    if not subfolder or is_url(subfolder):
+        raise ValueError(f"Invalid subfolder name: '{subfolder}'")
+
+    filename = c if c else default_filename_for(subfolder)
+    return ChallengeItem(subfolder=subfolder, url=url, filename=filename)
+
+
+def read_items_from_file(path_str: str) -> list[ChallengeItem]:
+    if path_str == "-":
+        lines = sys.stdin.read().splitlines()
+    else:
+        lines = Path(path_str).read_text(encoding="utf-8").splitlines()
+
+    items: list[ChallengeItem] = []
+    for lineno, raw in enumerate(lines, start=1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        try:
+            tokens = shlex.split(line)
+            items.append(parse_pair_tokens(tokens))
+        except ValueError as exc:
+            raise ValueError(f"{path_str}:{lineno}: {exc}") from exc
+    return items
+
+
+def prompt_extract(extract_arg: bool | None) -> bool:
+    if extract_arg is not None:
+        return extract_arg
+    ans = input("Auto-extract archives? [Y/n]: ").strip().lower()
+    return ans not in ("n", "no")
+
+
+def prompt_single(
+    folder: str | None,
+    url: str | None,
+    filename: str | None,
+    extract_arg: bool | None,
+) -> tuple[bool, ChallengeItem]:
+    if not folder:
+        folder = strip_input(input("Subfolder name: "))
+    folder = folder.rstrip("/")
+    if not folder or is_url(folder):
+        raise ValueError("Invalid subfolder name.")
+
+    if not url:
+        url = strip_input(input("Download URL: "))
+    if not is_url(url):
+        raise ValueError("Invalid or empty URL.")
+
+    default_name = default_filename_for(folder)
+    if not filename:
+        filename = strip_input(input(f"Filename [{default_name}]: ")) or default_name
+
+    extract = prompt_extract(extract_arg)
+    return extract, ChallengeItem(subfolder=folder, url=url, filename=filename)
+
+
+def prompt_interactive(parent_arg: str | None, extract_arg: bool | None) -> tuple[str, bool, list[ChallengeItem]]:
+    print("=== dlmulti (interactive mode) ===")
+    if parent_arg is None:
+        raw_parent = input("Parent folder [.]: ")
+        parent = strip_input(raw_parent) or "."
+    else:
+        parent = parent_arg
+        print(f"Parent folder: {parent}")
+
+    extract = prompt_extract(extract_arg)
+
+    print("Enter challenges (tip: you can also paste '<subfolder> <url> [filename]' on one line).")
+    items: list[ChallengeItem] = []
+    idx = 1
+    while True:
+        raw_first = input(f"\nChallenge #{idx} subfolder (Enter to start download): ")
+        first = strip_input(raw_first)
+        if not first:
+            break
+
+        try:
+            parts = shlex.split(raw_first)
+        except ValueError:
+            parts = raw_first.split()
+
+        if len(parts) >= 2 and (is_url(strip_input(parts[0])) or is_url(strip_input(parts[1]))):
+            try:
+                item = parse_pair_tokens(parts[:3])
+                items.append(item)
+                print(f"  + Queued {resolve_target_dir(parent, item.subfolder) / item.filename}")
+                idx += 1
+            except ValueError as exc:
+                print(f"  [!] {exc}")
+            continue
+
+        subfolder = first.rstrip("/")
+        if is_url(subfolder):
+            print("  [!] Looks like a URL. Enter the subfolder name first (or '<subfolder> <url>').")
+            continue
+
+        url = strip_input(input("  Download URL: "))
+        if not is_url(url):
+            print("  [!] Invalid or empty URL, skipping this entry.")
+            continue
+
+        default_name = default_filename_for(subfolder)
+        filename = strip_input(input(f"  Filename [{default_name}]: ")) or default_name
+        items.append(ChallengeItem(subfolder=subfolder, url=url, filename=filename))
+        idx += 1
+
+    return parent, extract, items
+
+
+def extract_archive(out_path: Path, folder: Path, mime: str) -> str:
+    if mime == "application/zip":
+        if shutil.which("unzip") is None:
+            return "skip extract ('unzip' not installed)"
+        subprocess.run(["unzip", "-o", "-q", str(out_path), "-d", str(folder)], check=True)
+        return "extracted zip"
+
+    if mime in ("application/gzip", "application/x-gzip"):
+        tar_check = subprocess.run(
+            ["tar", "-tzf", str(out_path)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if tar_check.returncode == 0:
+            subprocess.run(["tar", "-xzf", str(out_path), "-C", str(folder)], check=True)
+            return "extracted tar.gz"
+        gz_path = out_path.with_name(out_path.name + ".gz")
+        out_path.rename(gz_path)
+        subprocess.run(["gunzip", "-f", str(gz_path)], check=True)
+        return "extracted gzip"
+
+    if mime == "application/x-tar":
+        subprocess.run(["tar", "-xf", str(out_path), "-C", str(folder)], check=True)
+        return "extracted tar"
+
+    if mime == "application/x-7z-compressed":
+        if shutil.which("7z") is None:
+            return "skip extract ('7z' not installed)"
+        subprocess.run(
+            ["7z", "x", "-y", f"-o{folder}", str(out_path)],
+            stdout=subprocess.DEVNULL,
+            check=True,
+        )
+        return "extracted 7z"
+
+    return "no extraction needed"
+
+
+def download_one(parent: str, item: ChallengeItem, extract: bool) -> tuple[ChallengeItem, Path, bool, str]:
+    folder = resolve_target_dir(parent, item.subfolder)
+    out_path = folder / item.filename
+    tmp_path: Path | None = None
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            tmp_path = Path(tf.name)
+
+        subprocess.run(
+            ["curl", "-LsS", "-f", "--connect-timeout", "15", "-o", str(tmp_path), item.url],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        folder.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(tmp_path), str(out_path))
+        tmp_path = None
+
+        mime = subprocess.check_output(
+            ["file", "-b", "--mime-type", str(out_path)],
+            text=True,
+        ).strip()
+        desc = subprocess.check_output(
+            ["file", "-b", str(out_path)],
+            text=True,
+        ).strip()
+
+        msg = f"{out_path} ({desc})"
+        if extract:
+            ext_msg = extract_archive(out_path, folder, mime)
+            msg = f"{msg} -> {ext_msg}"
+
+        return item, folder, True, msg
+    except subprocess.CalledProcessError as exc:
+        err = (exc.stderr or str(exc)).strip()
+        return item, folder, False, err
+    except Exception as exc:
+        return item, folder, False, str(exc)
+    finally:
+        if tmp_path is not None and tmp_path.exists():
+            tmp_path.unlink(missing_ok=True)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="dlmulti",
+        description="Download one or multiple CTF challenges into separate subfolders.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Examples:
+  dlmulti                                    # Interactive multi-challenge mode
+  dlmulti rev                                # Interactive mode inside ./rev
+  dlmulti "https://..."                      # Single URL (prompts for folder/name)
+  dlmulti -x wayback "https://..."           # Single challenge + auto-extract
+  dlmulti -x wayback "https://..." chal.zip  # Single challenge + custom filename
+  dlmulti -p rev -x c1 URL1 c2 URL2          # Multiple challenges in parallel
+  dlmulti -p rev -x -i list.txt              # Read 'subfolder url [filename]' lines
+""",
+    )
+    parser.add_argument("-p", "-P", "--parent", default=None, help="Parent folder (default: '.')")
+    parser.add_argument("-F", "--folder", default=None, help="Subfolder name (single-file mode)")
+    parser.add_argument("-f", "--file", default=None, help="Output filename (single-file mode)")
+    parser.add_argument("-u", "--url", default=None, help="Download URL (single-file mode)")
+    parser.add_argument("-i", "--input", default=None, help="Read 'subfolder url [filename]' lines from file (or '-' for stdin)")
+    extract_group = parser.add_mutually_exclusive_group()
+    extract_group.add_argument("-x", "--extract", action="store_true", default=None, help="Auto-extract downloaded archives")
+    extract_group.add_argument("--no-extract", action="store_false", dest="extract", help="Do not extract archives")
+    parser.add_argument("-y", "--yes", action="store_true", help="Overwrite existing files without prompting")
+    parser.add_argument("-j", "--jobs", type=int, default=4, help="Parallel download workers (default: 4)")
+    parser.add_argument("args", nargs="*", help="[parent], [url], <folder> <url> [file], or pairs of <folder> <url>")
+    return parser
+
+
+def main() -> int:
+    parser = build_parser()
+    ns = parser.parse_args()
+    check_dependencies()
+
+    parent = strip_input(ns.parent).rstrip("/") if ns.parent else None
+    extract = ns.extract
+    items: list[ChallengeItem] = []
+
+    if ns.input is not None:
+        parent = parent or "."
+        extract = bool(extract) if extract is not None else False
+        try:
+            items = read_items_from_file(ns.input)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+    elif ns.folder is not None or ns.url is not None or ns.file is not None:
+        # Single-file flag mode (compatible with dlfile flags).
+        parent = parent or "."
+        pos_folder = None
+        pos_url = None
+        pos_file = None
+        for tok in ns.args:
+            val = strip_input(tok)
+            if is_url(val) and pos_url is None:
+                pos_url = val
+            elif pos_folder is None:
+                pos_folder = val
+            elif pos_file is None:
+                pos_file = val
+        try:
+            extract, item = prompt_single(
+                strip_input(ns.folder) if ns.folder else pos_folder,
+                strip_input(ns.url) if ns.url else pos_url,
+                strip_input(ns.file) if ns.file else pos_file,
+                extract,
+            )
+            items = [item]
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+    elif len(ns.args) == 0:
+        parent, extract, items = prompt_interactive(parent, extract)
+    elif len(ns.args) == 1:
+        arg0 = strip_input(ns.args[0])
+        if is_url(arg0):
+            parent = parent or "."
+            try:
+                extract, item = prompt_single(None, arg0, None, extract)
+                items = [item]
+            except ValueError as exc:
+                print(f"Error: {exc}", file=sys.stderr)
+                return 1
+        elif parent is None:
+            parent, extract, items = prompt_interactive(arg0.rstrip("/") or ".", extract)
+        else:
+            print("Error: Expected '<subfolder> <url>' pairs.", file=sys.stderr)
+            return 1
+    elif len(ns.args) == 3 and (is_url(strip_input(ns.args[0])) or is_url(strip_input(ns.args[1]))) and not is_url(strip_input(ns.args[2])):
+        parent = parent or "."
+        extract = bool(extract) if extract is not None else False
+        try:
+            items = [parse_pair_tokens(ns.args)]
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+    else:
+        if len(ns.args) % 2 != 0:
+            print("Error: CLI challenges must be passed as '<subfolder> <url>' pairs.", file=sys.stderr)
+            return 1
+        parent = parent or "."
+        extract = bool(extract) if extract is not None else False
+        try:
+            for i in range(0, len(ns.args), 2):
+                items.append(parse_pair_tokens([ns.args[i], ns.args[i + 1]]))
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+    if not items:
+        print("No challenges queued. Nothing to do.")
+        return 0
+
+    filtered: list[ChallengeItem] = []
+    for item in items:
+        out_path = resolve_target_dir(parent, item.subfolder) / item.filename
+        if out_path.exists() and not ns.yes:
+            if not sys.stdin.isatty():
+                print(f"[!] Skipping '{out_path}' (already exists; pass -y to overwrite).")
+                continue
+            ans = input(f"File '{out_path}' already exists. Overwrite? [y/N]: ").strip().lower()
+            if ans not in ("y", "yes"):
+                print(f"  [-] Skipped {out_path}")
+                continue
+        filtered.append(item)
+
+    if not filtered:
+        print("Nothing left to download.")
+        return 0
+
+    print(f"\n[+] Downloading {len(filtered)} challenge(s) into '{parent}' (jobs={min(ns.jobs, len(filtered))})...")
+    succeeded_dirs: list[Path] = []
+    failures = 0
+
+    with ThreadPoolExecutor(max_workers=max(1, ns.jobs)) as pool:
+        futures = [pool.submit(download_one, parent, item, extract) for item in filtered]
+        for fut in as_completed(futures):
+            item, folder, ok, msg = fut.result()
+            if ok:
+                print(f"  [OK]   {item.subfolder}: {msg}")
+                succeeded_dirs.append(folder)
+            else:
+                print(f"  [FAIL] {item.subfolder}: {msg}", file=sys.stderr)
+                failures += 1
+
+    if succeeded_dirs:
+        ok_set = set(succeeded_dirs)
+        ordered = [str(resolve_target_dir(parent, it.subfolder)) for it in filtered if resolve_target_dir(parent, it.subfolder) in ok_set]
+        if len(ordered) > 1:
+            print("\nReady for /findflagteams:")
+            print(f"  /findflagteams <category> {' '.join(ordered)}")
+        else:
+            print("\nReady for /findflag:")
+            print(f"  /findflag {ordered[0]}")
+
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
